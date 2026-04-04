@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+
+<html lang="ja"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&amp;family=Noto+Sans+JP:wght@400;500;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0055e5",
+                        "surface": "#ffffff",
+                        "background": "#f2f4f7",
+                        "border": "#dee2e6",
+                        "text-main": "#0f1115",
+                        "text-sub": "#4a5568",
+                        "text-muted": "#8a94a6",
+                        "sym-great": "#10b981",
+                        "sym-good":  "#0055e5",
+                        "sym-fair":  "#718096",
+                        "sym-bad":   "#f59e0b",
+                        "eval-positive-bg": "#ecfdf5",
+                        "eval-positive-text": "#065f46",
+                        "eval-neutral-bg": "#e8effe",
+                        "eval-neutral-text": "#003aaa",
+                        "eval-warning-bg": "#fffbeb",
+                        "eval-warning-text": "#92400e",
+                        "eval-disregard-bg": "#f3f4f6",
+                        "eval-disregard-text": "#4b5563",
+                        "tag-gold-bg": "#fff4d6",
+                        "tag-gold-text": "#7a5000",
+                        "tag-red-bg": "#fdeaea",
+                        "tag-red-text": "#8c1a1a",
+                        "tag-blue-bg": "#e8effe",
+                        "tag-blue-text": "#003aaa",
+                        "tag-green-bg": "#e6f7ee",
+                        "tag-green-text": "#0d5530",
+                        "waku-1": "#ffffff",
+                        "waku-2": "#e2e8f0",
+                        "waku-3": "#fee2e2",
+                        "waku-4": "#dbeafe",
+                        "waku-5": "#fef9c3",
+                        "waku-6": "#dcfce7",
+                        "waku-7": "#ffedd5",
+                        "waku-8": "#fce7f3"
+                    },
+                    fontFamily: {
+                        "body": ["Noto Sans JP", "sans-serif"],
+                        "rajdhani": ["Rajdhani", "sans-serif"]
+                    },
+                    boxShadow: {
+                        'card': '0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1)',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+        }
+        body { font-family: 'Noto Sans JP', sans-serif; background-color: #f2f4f7; }
+        .rajdhani { font-family: 'Rajdhani', sans-serif; }
+        .logo-font { font-family: 'Noto Sans JP', sans-serif; font-weight: 900; }
+        .row-sep { border-bottom: 1px solid #edf2f7; }
+        .lap-bar { transition: height 0.3s ease; }
+        .nowrap { white-space: nowrap; }
+        @media (max-width: 374px) {
+            .text-xs-small { font-size: 10px; }
+            .grid-horse-row { grid-template-cols: 24px 24px 1fr 95px !important; gap: 4px !important; }
+        }
+    </style>
+</head>
+<body class="text-text-main select-none pb-32">
+<header class="fixed top-0 left-0 w-full z-50 flex items-center px-4 h-14 bg-white border-b border-border shadow-sm">
+<div class="flex items-center w-full gap-3">
+<button class="w-8 h-8 rounded-lg border border-border bg-white flex items-center justify-center active:scale-95 duration-150">
+<span class="material-symbols-outlined text-text-main text-lg font-bold">arrow_back_ios_new</span>
+</button>
+<div class="flex items-baseline gap-0.5">
+<span class="text-xl logo-font tracking-tighter">回顧</span>
+<span class="text-xl logo-font text-primary italic font-black">AI</span>
+</div>
+<div class="flex flex-col leading-tight ml-auto text-right">
+<span class="text-sm font-bold text-text-main">大阪杯</span>
+<span class="text-[10px] text-text-muted rajdhani font-bold">2026/3/29 · HANSHIN G1</span>
+</div>
+</div>
+</header>
+<main class="pt-16 px-3 max-w-md mx-auto space-y-3">
+<section class="bg-white rounded-xl shadow-card border border-border overflow-hidden">
+<div class="h-1 bg-primary w-full"></div>
+<div class="p-5">
+<h2 class="text-3xl font-black text-text-main mb-3 tracking-tight">大阪杯</h2>
+<div class="flex flex-wrap gap-2 mb-4">
+<span class="text-[11px] font-bold px-3 py-1 rounded-full border border-[#e8c060] bg-tag-gold-bg text-tag-gold-text rajdhani uppercase tracking-wider">G1</span>
+<span class="text-[11px] font-bold px-3 py-1 rounded-full border border-[#80c8a0] bg-tag-green-bg text-tag-green-text rajdhani uppercase tracking-wider">芝</span>
+<span class="text-[11px] font-bold px-3 py-1 rounded-full border border-[#99bbf5] bg-tag-blue-bg text-tag-blue-text rajdhani uppercase tracking-wider">良</span>
+<span class="text-[11px] font-bold px-3 py-1 rounded-full border border-border bg-gray-50 text-text-sub rajdhani uppercase tracking-wider">2000m</span>
+<span class="text-[11px] font-bold px-3 py-1 rounded-full border border-border bg-gray-50 text-text-sub rajdhani uppercase tracking-wider">16頭</span>
+</div>
+<div class="flex gap-4 text-[13px] text-text-sub font-bold">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">location_on</span>阪神競馬場</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">calendar_today</span>2026年3月29日</span>
+</div>
+</div>
+</section>
+<section class="grid grid-cols-2 gap-2">
+<div class="bg-white shadow-card border border-border rounded-xl p-4">
+<span class="rajdhani text-[11px] uppercase text-text-muted font-bold block mb-1 tracking-widest">Pace</span>
+<span class="text-sm font-bold text-text-main">ミドル寄りスロー</span>
+</div>
+<div class="bg-white shadow-card border border-border rounded-xl p-4">
+<span class="rajdhani text-[11px] uppercase text-text-muted font-bold block mb-1 tracking-widest">Track Bias</span>
+<span class="text-sm font-bold text-text-main">内枠・先行有利</span>
+</div>
+<div class="col-span-2 bg-white shadow-card border border-border rounded-xl p-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary text-[18px]">analytics</span>
+<span class="text-[11px] font-bold text-text-main uppercase tracking-widest">展開サマリー</span>
+</div>
+<p class="text-[13px] leading-relaxed text-text-sub font-medium">前半1000m 61.2。3〜4角でペースが急上昇し、先行勢が残りやすい流れ。後方からの差しはほぼ届かず。</p>
+</div>
+</section>
+<section class="bg-white rounded-xl shadow-card border border-border p-5">
+<div class="flex justify-between items-center mb-5">
+<span class="rajdhani text-[11px] uppercase text-text-muted font-bold tracking-widest">Lap Time Analysis</span>
+<span class="rajdhani text-[11px] font-bold text-primary uppercase">前半 61.2 / 後半 57.6</span>
+</div>
+<div class="flex items-end gap-[3px] h-16 mb-4">
+<div class="flex-1 bg-primary/20 rounded-t-sm lap-bar" style="height: 70%;"></div>
+<div class="flex-1 bg-primary/20 rounded-t-sm lap-bar" style="height: 50%;"></div>
+<div class="flex-1 bg-primary/20 rounded-t-sm lap-bar" style="height: 60%;"></div>
+<div class="flex-1 bg-primary/20 rounded-t-sm lap-bar" style="height: 65%;"></div>
+<div class="flex-1 bg-gray-200 rounded-t-sm lap-bar" style="height: 85%;"></div>
+<div class="flex-1 bg-amber-500/60 rounded-t-sm lap-bar" style="height: 50%;"></div>
+<div class="flex-1 bg-amber-500/60 rounded-t-sm lap-bar" style="height: 45%;"></div>
+<div class="flex-1 bg-amber-500/60 rounded-t-sm lap-bar" style="height: 40%;"></div>
+<div class="flex-1 bg-primary/20 rounded-t-sm lap-bar" style="height: 55%;"></div>
+<div class="flex-1 bg-primary/20 rounded-t-sm lap-bar" style="height: 60%;"></div>
+</div>
+<div class="flex gap-4">
+<span class="flex items-center gap-1.5 text-[10px] text-text-muted font-bold uppercase"><span class="w-2.5 h-2.5 rounded-sm bg-primary/20"></span>通常</span>
+<span class="flex items-center gap-1.5 text-[10px] text-text-muted font-bold uppercase"><span class="w-2.5 h-2.5 rounded-sm bg-amber-500/60"></span>加速区間</span>
+</div>
+</section>
+<div class="flex items-center gap-2 px-1 pt-2">
+<span class="material-symbols-outlined text-primary text-[18px]">list_alt</span>
+<span class="text-[12px] font-black text-text-main uppercase tracking-wider">出走馬（全16頭）</span>
+</div>
+<section class="bg-white rounded-xl shadow-card border border-border overflow-hidden">
+<div class="grid grid-cols-[28px_28px_1fr_105px] grid-horse-row gap-2 px-3 py-3 bg-gray-50 border-b border-border items-center">
+<span class="rajdhani text-[10px] font-black text-text-muted text-center">着</span>
+<span class="rajdhani text-[10px] font-black text-text-muted text-center">枠</span>
+<span class="rajdhani text-[10px] font-black text-text-muted">馬名 / データ</span>
+<span class="rajdhani text-[10px] font-black text-text-muted text-right">能力評価 → 適性/ロ</span>
+</div>
+<div class="bg-blue-50/20">
+<div class="grid grid-cols-[28px_28px_1fr_105px] grid-horse-row gap-2 px-3 py-4 items-center row-sep">
+<span class="text-xl font-black text-tag-gold-text text-center rajdhani italic leading-none">1</span>
+<div class="w-6 h-6 rounded-md bg-waku-5 border border-[#e8c060] shadow-sm flex items-center justify-center text-[11px] font-black rajdhani">5</div>
+<div class="min-w-0">
+<h3 class="font-bold text-[14px] text-text-main leading-tight truncate">ドウデュース</h3>
+<span class="text-[10px] text-text-sub rajdhani font-bold block mt-0.5">57kg · 4-4-3-2</span>
+</div>
+<div class="flex flex-col items-end gap-1.5">
+<div class="flex items-center gap-1">
+<div class="flex items-center gap-0.5">
+<span class="rajdhani text-[7px] font-black text-text-muted uppercase">能力</span>
+<span class="text-[16px] font-black text-primary leading-none">◎</span>
+</div>
+<div class="flex gap-0.5">
+<div class="bg-white border border-border rounded-md px-1 py-0.5 flex items-center gap-0.5 shadow-sm">
+<span class="rajdhani text-[7px] font-black text-text-muted">適</span>
+<span class="text-[11px] font-black text-primary leading-none">◎</span>
+</div>
+<div class="bg-white border border-border rounded-md px-1 py-0.5 flex items-center gap-0.5 shadow-sm">
+<span class="rajdhani text-[7px] font-black text-text-muted">ロ</span>
+<span class="text-[11px] font-black text-primary leading-none">○</span>
+</div>
+</div>
+</div>
+<span class="text-[9px] font-black px-2 py-0.5 rounded-full border border-primary/30 bg-eval-neutral-bg text-eval-neutral-text tracking-tight nowrap">実力通り</span>
+</div>
+</div>
+<div class="px-3 py-4 space-y-3 bg-white/60">
+<div class="grid grid-cols-2 gap-2">
+<div class="bg-white border border-border p-2 rounded-lg shadow-sm">
+<span class="rajdhani text-[9px] font-black text-text-muted block mb-1">展開</span>
+<div class="flex items-baseline gap-1">
+<span class="text-[11px] font-black text-primary">+1.5馬身</span>
+<span class="text-[10px] font-bold text-text-sub">向いた</span>
+</div>
+</div>
+<div class="bg-white border border-border p-2 rounded-lg shadow-sm">
+<span class="rajdhani text-[9px] font-black text-text-muted block mb-1">トラックB</span>
+<div class="flex items-baseline gap-1">
+<span class="text-[11px] font-black text-primary">+0.8馬身</span>
+<span class="text-[10px] font-bold text-text-sub">内枠有利</span>
+</div>
+</div>
+</div>
+<div class="bg-white border border-border p-3 rounded-lg shadow-sm">
+<p class="text-[12px] text-text-main font-medium leading-relaxed">条件面・走行ともに恵まれた内容。実力通りの評価。次走も信頼できる。</p>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-[28px_28px_1fr_105px] grid-horse-row gap-2 px-3 py-4 items-center row-sep hover:bg-gray-50 cursor-pointer">
+<span class="text-xl font-black text-text-muted text-center rajdhani italic leading-none">2</span>
+<div class="w-6 h-6 rounded-md bg-waku-2 border border-border flex items-center justify-center text-[11px] font-black rajdhani">2</div>
+<div class="min-w-0"><h3 class="font-bold text-[14px] text-text-main leading-tight truncate">ベラジオオペラ</h3><span class="text-[10px] text-text-sub rajdhani font-bold block mt-0.5">57kg · 2-2-2-2</span></div>
+<div class="flex flex-col items-end gap-1.5">
+<div class="flex items-center gap-1">
+<div class="flex items-center gap-0.5"><span class="rajdhani text-[7px] font-black text-text-muted uppercase">能力</span><span class="text-[16px] font-black text-sym-great leading-none">×</span></div>
+<div class="flex gap-0.5">
+<div class="bg-gray-50 border border-border rounded-md px-1 py-0.5 flex items-center gap-0.5"><span class="rajdhani text-[7px] font-black text-text-muted">適</span><span class="text-[11px] font-black text-sym-great leading-none">◎</span></div>
+<div class="bg-gray-50 border border-border rounded-md px-1 py-0.5 flex items-center gap-0.5"><span class="rajdhani text-[7px] font-black text-text-muted">ロ</span><span class="text-[11px] font-black text-sym-great leading-none">◎</span></div>
+</div>
+</div>
+<span class="text-[9px] font-black px-2 py-0.5 rounded-full border border-emerald-200 bg-eval-positive-bg text-eval-positive-text tracking-tight nowrap">実力以下</span>
+</div>
+</div>
+<div class="grid grid-cols-[28px_28px_1fr_105px] grid-horse-row gap-2 px-3 py-4 items-center row-sep hover:bg-gray-50 cursor-pointer">
+<span class="text-xl font-black text-text-muted text-center rajdhani italic leading-none">3</span>
+<div class="w-6 h-6 rounded-md bg-waku-8 border border-[#f4b4d0] flex items-center justify-center text-[11px] font-black rajdhani">8</div>
+<div class="min-w-0"><h3 class="font-bold text-[14px] text-text-main leading-tight truncate">ローシャムパーク</h3><span class="text-[10px] text-text-sub rajdhani font-bold block mt-0.5">57kg · 12-11-9-7</span></div>
+<div class="flex flex-col items-end gap-1.5">
+<div class="flex items-center gap-1">
+<div class="flex items-center gap-0.5"><span class="rajdhani text-[7px] font-black text-text-muted uppercase">能力</span><span class="text-[16px] font-black text-sym-bad leading-none">◎</span></div>
+<div class="flex gap-0.5">
+<div class="bg-gray-50 border border-border rounded-md px-1 py-0.5 flex items-center gap-0.5"><span class="rajdhani text-[7px] font-black text-text-muted">適</span><span class="text-[11px] font-black text-sym-bad leading-none">×</span></div>
+<div class="bg-gray-50 border border-border rounded-md px-1 py-0.5 flex items-center gap-0.5"><span class="rajdhani text-[7px] font-black text-text-muted">ロ</span><span class="text-[11px] font-black text-sym-bad leading-none">×</span></div>
+</div>
+</div>
+<span class="text-[9px] font-black px-2 py-0.5 rounded-full border border-amber-200 bg-eval-warning-bg text-eval-warning-text tracking-tight nowrap">実力以上</span>
+</div>
+</div>
+<div class="grid grid-cols-[28px_28px_1fr_105px] grid-horse-row gap-2 px-3 py-4 items-center row-sep hover:bg-gray-50 cursor-pointer">
+<span class="text-xl font-black text-text-muted text-center rajdhani italic leading-none">4</span>
+<div class="w-6 h-6 rounded-md bg-waku-3 border border-red-200 flex items-center justify-center text-[11px] font-black rajdhani">3</div>
+<div class="min-w-0"><h3 class="font-bold text-[14px] text-text-main leading-tight truncate">ルージュエヴァイユ</h3><span class="text-[10px] text-text-sub rajdhani font-bold block mt-0.5">55kg · 8-8-8-8</span></div>
+<div class="flex flex-col items-end gap-1.5">
+<div class="flex items-center gap-1">
+<div class="flex items-center gap-0.5"><span class="rajdhani text-[7px] font-black text-text-muted uppercase">能力</span><span class="text-[16px] font-black text-text-muted leading-none">―</span></div>
+<div class="flex gap-0.5">
+<div class="bg-gray-50 border border-border rounded-md px-1 py-0.5 flex items-center gap-0.5"><span class="rajdhani text-[7px] font-black text-text-muted">適</span><span class="text-[11px] font-black text-text-muted leading-none">―</span></div>
+<div class="bg-gray-50 border border-border rounded-md px-1 py-0.5 flex items-center gap-0.5"><span class="rajdhani text-[7px] font-black text-text-muted">ロ</span><span class="text-[11px] font-black text-text-muted leading-none">―</span></div>
+</div>
+</div>
+<span class="text-[9px] font-black px-2 py-0.5 rounded-full border border-gray-300 bg-eval-disregard-bg text-eval-disregard-text tracking-tight nowrap">度外視</span>
+</div>
+</div>
+<div class="grid grid-cols-[28px_28px_1fr_105px] grid-horse-row gap-2 px-3 py-4 items-center row-sep hover:bg-gray-50 cursor-pointer">
+<span class="text-xl font-black text-text-muted text-center rajdhani italic leading-none">5</span>
+<div class="w-6 h-6 rounded-md bg-waku-6 border border-emerald-200 flex items-center justify-center text-[11px] font-black rajdhani">6</div>
+<div class="min-w-0"><h3 class="font-bold text-[14px] text-text-main leading-tight truncate">ジオグリフ</h3><span class="text-[10px] text-text-sub rajdhani font-bold block mt-0.5">57kg · 5-5-5-5</span></div>
+<div class="flex flex-col items-end gap-1.5">
+<div class="flex items-center gap-1">
+<div class="flex items-center gap-0.5"><span class="rajdhani text-[7px] font-black text-text-muted uppercase">能力</span><span class="text-[16px] font-black text-text-muted leading-none">△</span></div>
+<div class="flex gap-0.5"><div class="bg-gray-50 border border-border rounded-md px-1 py-0.5 flex items-center gap-0.5"><span class="rajdhani text-[7px] font-black text-text-muted">適</span><span class="text-[11px] font-black text-text-muted">○</span></div></div>
+</div>
+<span class="text-[9px] font-black px-2 py-0.5 rounded-full border border-gray-300 bg-eval-disregard-bg text-eval-disregard-text tracking-tight nowrap">実力通り</span>
+</div>
+</div>
+<div class="grid grid-cols-[28px_28px_1fr_105px] grid-horse-row gap-2 px-3 py-4 items-center row-sep hover:bg-gray-50 cursor-pointer">
+<span class="text-xl font-black text-text-muted text-center rajdhani italic leading-none">6</span>
+<div class="w-6 h-6 rounded-md bg-waku-1 border border-border flex items-center justify-center text-[11px] font-black rajdhani">1</div>
+<div class="min-w-0"><h3 class="font-bold text-[14px] text-text-main leading-tight truncate">ミッキーゴージャス</h3><span class="text-[10px] text-text-sub rajdhani font-bold block mt-0.5">55kg · 10-10-10-10</span></div>
+<div class="flex flex-col items-end gap-1.5">
+<div class="flex items-center gap-1"><span class="text-[16px] font-black text-text-muted leading-none">―</span></div>
+<span class="text-[9px] font-black px-2 py-0.5 rounded-full border border-gray-300 bg-eval-disregard-bg text-eval-disregard-text tracking-tight nowrap">度外視</span>
+</div>
+</div>
+<div class="grid grid-cols-[28px_28px_1fr_105px] grid-horse-row gap-2 px-3 py-4 items-center row-sep hover:bg-gray-50 cursor-pointer">
+<span class="text-xl font-black text-text-muted text-center rajdhani italic leading-none">7</span>
+<div class="w-6 h-6 rounded-md bg-waku-4 border border-blue-200 flex items-center justify-center text-[11px] font-black rajdhani">4</div>
+<div class="min-w-0"><h3 class="font-bold text-[14px] text-text-main leading-tight truncate">ハーパー</h3><span class="text-[10px] text-text-sub rajdhani font-bold block mt-0.5">55kg · 3-3-4-5</span></div>
+<div class="flex flex-col items-end gap-1.5">
+<div class="flex items-center gap-1"><span class="text-[16px] font-black text-sym-bad leading-none">△</span></div>
+<span class="text-[9px] font-black px-2 py-0.5 rounded-full border border-amber-200 bg-eval-warning-bg text-eval-warning-text tracking-tight nowrap">実力以上</span>
+</div>
+</div>
+<div class="py-4 text-center text-[10px] text-text-muted font-bold rajdhani bg-gray-50/50">... 8位〜16位の全頭情報を表示中 ...</div>
+<div class="grid grid-cols-[28px_28px_1fr_105px] grid-horse-row gap-2 px-3 py-4 items-center hover:bg-gray-50 cursor-pointer">
+<span class="text-xl font-black text-text-muted text-center rajdhani italic leading-none">16</span>
+<div class="w-6 h-6 rounded-md bg-waku-7 border border-orange-200 flex items-center justify-center text-[11px] font-black rajdhani">7</div>
+<div class="min-w-0"><h3 class="font-bold text-[14px] text-text-main leading-tight truncate">カテドラル</h3><span class="text-[10px] text-text-sub rajdhani font-bold block mt-0.5">57kg · 16-16-16-16</span></div>
+<div class="flex flex-col items-end gap-1.5">
+<div class="flex items-center gap-1"><span class="text-[16px] font-black text-text-muted leading-none">―</span></div>
+<span class="text-[9px] font-black px-2 py-0.5 rounded-full border border-gray-300 bg-eval-disregard-bg text-eval-disregard-text tracking-tight nowrap">度外視</span>
+</div>
+</div>
+</section>
+<div class="pt-2">
+<button class="w-full bg-primary text-white py-4 rounded-xl font-black text-[14px] rajdhani tracking-[0.1em] uppercase flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-all">
+            Add horse to comparison
+            <span class="material-symbols-outlined text-xl">arrow_forward</span>
+</button>
+</div>
+</main>
+<nav class="fixed bottom-0 left-0 w-full z-50 bg-white border-t border-border flex justify-around items-center px-6 pb-8 pt-3 shadow-[0_-1px_10px_rgba(0,0,0,0.05)]">
+<a class="flex flex-col items-center gap-1 text-text-muted" href="#">
+<span class="material-symbols-outlined text-[24px]">home</span>
+<span class="text-[10px] font-black rajdhani uppercase tracking-widest">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary relative" href="#">
+<span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">sports_score</span>
+<span class="text-[10px] font-black rajdhani uppercase tracking-widest">Race</span>
+<div class="absolute -bottom-2 w-1.5 h-1.5 bg-primary rounded-full"></div>
+</a>
+<a class="flex flex-col items-center gap-1 text-text-muted" href="#">
+<span class="material-symbols-outlined text-[24px]">compare_arrows</span>
+<span class="text-[10px] font-black rajdhani uppercase tracking-widest">Compare</span>
+</a>
+</nav>
+</body></html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+
+<html lang="ja"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&amp;family=Rajdhani:wght@500;600;700&amp;family=Noto+Sans+JP:wght@400;500;700&amp;family=Space+Grotesk:wght@500;700&amp;family=Inter:wght@400;500;700&amp;family=Manrope:wght@500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        .font-bebas { font-family: 'Bebas Neue', cursive; }
+        .font-rajdhani { font-family: 'Rajdhani', sans-serif; }
+        .card-border { border: 1px solid #e8eaed; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0055e5",
+                        "primary-container": "#eef4ff",
+                        "on-primary": "#ffffff",
+                        "surface": "#f8f9fb",
+                        "on-surface": "#191c1e",
+                        "on-surface-variant": "#5e636e",
+                        "outline-variant": "#e8eaed",
+                        "surface-container-low": "#f3f4f6",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed": "#dbe1ff",
+                        "on-primary-fixed-variant": "#003daa",
+                    },
+                    borderRadius: {"DEFAULT": "4px", "lg": "8px", "xl": "12px", "2xl": "16px", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="sticky top-0 z-50 bg-white border-b border-gray-100 flex justify-between items-center w-full px-4 h-16">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">arrow_back</span>
+<h1 class="text-base font-bold text-on-surface">能力比較</h1>
+</div>
+<div class="flex items-center gap-1">
+<span class="font-bold text-lg text-primary tracking-tight">回顧AI</span>
+<span class="material-symbols-outlined text-primary text-xl">analytics</span>
+</div>
+</header>
+<main class="p-4 space-y-4">
+<!-- Horse VS Layout -->
+<section class="flex items-stretch gap-3 relative">
+<!-- Horse A -->
+<div class="flex-1 bg-white card-border rounded-xl p-3 shadow-sm flex flex-col justify-between min-h-[110px]">
+<div>
+<span class="text-[10px] font-bold text-primary block mb-1">比較馬 A</span>
+<h2 class="text-base font-bold leading-tight line-clamp-2">レモンポップ</h2>
+</div>
+<button class="mt-2 flex items-center justify-center gap-1 border border-outline-variant rounded-full py-1 text-[10px] font-bold text-on-surface-variant w-full hover:bg-gray-50">
+<span>変更</span>
+<span class="material-symbols-outlined text-[14px]">swap_horiz</span>
+</button>
+</div>
+<!-- VS Badge -->
+<div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+<div class="bg-[#2c313a] text-white text-[11px] font-black w-9 h-9 rounded-full flex items-center justify-center border-[3px] border-surface italic shadow-md">VS</div>
+</div>
+<!-- Horse B -->
+<div class="flex-1 bg-white card-border rounded-xl p-3 shadow-sm flex flex-col justify-between min-h-[110px]">
+<div>
+<span class="text-[10px] font-bold text-on-surface-variant block mb-1">比較馬 B</span>
+<h2 class="text-base font-bold leading-tight line-clamp-2">ウィルソンテソーロ</h2>
+</div>
+<button class="mt-2 flex items-center justify-center gap-1 border border-outline-variant rounded-full py-1 text-[10px] font-bold text-on-surface-variant w-full hover:bg-gray-50">
+<span>変更</span>
+<span class="material-symbols-outlined text-[14px]">swap_horiz</span>
+</button>
+</div>
+</section>
+<!-- Benchmark Selector -->
+<section class="bg-[#f8f9fa] card-border p-3.5 rounded-xl shadow-sm flex items-center justify-between cursor-pointer active:bg-gray-100 transition-colors">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-on-surface-variant text-lg">straighten</span>
+<span class="text-xs font-bold text-on-surface-variant">物差し馬</span>
+</div>
+<div class="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-lg border border-outline-variant shadow-sm">
+<span class="text-sm font-bold">キタサンブラック</span>
+<span class="material-symbols-outlined text-primary text-xl">expand_more</span>
+</div>
+</section>
+<!-- Summary Result -->
+<section class="bg-white rounded-2xl p-6 text-center space-y-4 shadow-sm card-border relative overflow-hidden">
+<p class="text-xs font-bold text-on-surface-variant tracking-wider">もし直接対決したら</p>
+<div class="flex items-baseline justify-center gap-2">
+<span class="font-bebas text-6xl text-primary leading-none tracking-tight">+12.0</span>
+<span class="text-lg font-bold text-on-surface">馬身</span>
+</div>
+<div class="flex items-center justify-center gap-2">
+<div class="inline-flex items-center gap-2 bg-primary-container px-6 py-2.5 rounded-full">
+<span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<span class="font-bold text-primary text-sm">レモンポップが優勢</span>
+</div>
+</div>
+</section>
+<!-- Tabs -->
+<nav class="flex gap-1 bg-gray-200/40 p-1 rounded-full">
+<button class="flex-1 py-2.5 px-2 bg-primary text-white text-xs font-bold rounded-full shadow-md">統合評価</button>
+<button class="flex-1 py-2.5 px-2 text-on-surface-variant text-xs font-bold rounded-full">レース1</button>
+<button class="flex-1 py-2.5 px-2 text-on-surface-variant text-xs font-bold rounded-full">レース2</button>
+</nav>
+<!-- Detail Parameters -->
+<section class="bg-white rounded-2xl overflow-hidden shadow-sm card-border">
+<div class="bg-surface-container-low px-4 py-3 border-b border-outline-variant/30">
+<h3 class="font-bold text-[12px] uppercase tracking-wider text-on-surface-variant">能力補正詳細</h3>
+</div>
+<div class="divide-y divide-outline-variant/30">
+<div class="flex items-center justify-between p-4">
+<span class="text-sm font-medium text-on-surface-variant">実際の着差（ベース）</span>
+<span class="font-bebas text-2xl text-on-surface">4.5</span>
+</div>
+<div class="grid grid-cols-2 bg-gray-50/30 gap-px">
+<div class="bg-white p-4">
+<span class="text-[10px] font-bold text-on-surface-variant block mb-1">斤量補正</span>
+<span class="font-bebas text-xl text-emerald-600">+1.2</span>
+</div>
+<div class="bg-white p-4">
+<span class="text-[10px] font-bold text-on-surface-variant block mb-1">馬場適性</span>
+<span class="font-bebas text-xl text-red-500">-0.8</span>
+</div>
+<div class="bg-white p-4">
+<span class="text-[10px] font-bold text-on-surface-variant block mb-1">展開・ペース</span>
+<span class="font-bebas text-xl text-emerald-600">+2.5</span>
+</div>
+<div class="bg-white p-4">
+<span class="text-[10px] font-bold text-on-surface-variant block mb-1">馬場傾向</span>
+<span class="font-bebas text-xl text-gray-400">0.0</span>
+</div>
+<div class="bg-white p-4">
+<span class="text-[10px] font-bold text-on-surface-variant block mb-1">不利・出遅れ</span>
+<span class="font-bebas text-xl text-emerald-600">+4.6</span>
+</div>
+<div class="bg-white p-4">
+<span class="text-[10px] font-bold text-on-surface-variant block mb-1">コース取り</span>
+<span class="font-bebas text-xl text-gray-400">0.0</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-5 bg-primary/5">
+<span class="font-bold text-primary text-sm">補正後の能力差</span>
+<div class="text-right">
+<span class="font-bebas text-3xl text-primary leading-none">+12.0</span>
+<span class="text-xs font-bold text-primary ml-1.5">馬身</span>
+</div>
+</div>
+</div>
+</section>
+<!-- CTA -->
+<div class="pt-2 pb-6">
+<button class="w-full bg-on-surface text-white py-4 rounded-2xl flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-[0.98] shadow-lg shadow-black/5">
+<span class="font-bold text-sm tracking-tight">レース詳細へ戻る</span>
+<span class="material-symbols-outlined text-xl">arrow_forward</span>
+</button>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 right-0 flex justify-around items-center h-14 pb-safe px-4 max-w-md mx-auto bg-white border-t border-gray-100 z-50">
+<!-- レース Tab (Inactive) -->
+<div class="flex flex-col items-center justify-center text-slate-400 py-1 px-4 cursor-pointer hover:text-blue-500 transition-transform duration-150 active:scale-95">
+<span class="material-symbols-outlined">format_list_bulleted</span>
+<span class="text-[10px] font-bold tracking-tight font-sans mt-0.5">レース</span>
+</div>
+<!-- 能力比較 Tab (Active) -->
+<div class="flex flex-col items-center justify-center text-blue-600 bg-blue-50/50 rounded-lg py-1 px-4 cursor-pointer transition-transform duration-150 active:scale-95">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">compare_arrows</span>
+<span class="text-[10px] font-bold tracking-tight font-sans mt-0.5">能力比較</span>
+</div>
+</nav>
+</body></html>

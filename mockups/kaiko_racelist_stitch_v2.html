@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+
+<html lang="ja"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&amp;family=Rajdhani:wght@400;500;600;700&amp;family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface": "#ffffff",
+              "on-surface-variant": "#4a5568",
+              "error": "#ba1a1a",
+              "secondary-fixed-dim": "#c6c6c9",
+              "secondary-fixed": "#e2e2e5",
+              "on-error": "#ffffff",
+              "primary-fixed": "#dbe1ff",
+              "on-secondary-fixed": "#1a1c1e",
+              "secondary": "#0f1115",
+              "primary-container": "#e8effe",
+              "surface-container-highest": "#dee2e6",
+              "on-secondary-fixed-variant": "#454749",
+              "on-error-container": "#8c1a1a",
+              "outline-variant": "#edf2f7",
+              "primary": "#0055e5",
+              "on-tertiary-fixed-variant": "#574500",
+              "on-primary-fixed-variant": "#003daa",
+              "tertiary": "#10b981",
+              "surface-container": "#f2f4f7",
+              "on-tertiary": "#ffffff",
+              "tertiary-fixed-dim": "#e9c349",
+              "tertiary-container": "#ecfdf5",
+              "on-surface": "#0f1115",
+              "on-background": "#0f1115",
+              "outline": "#dee2e6",
+              "surface-bright": "#ffffff",
+              "surface-container-high": "#edf2f7",
+              "inverse-on-surface": "#ffffff",
+              "surface-dim": "#f2f4f7",
+              "on-secondary": "#ffffff",
+              "tertiary-fixed": "#fff4d6",
+              "inverse-primary": "#b4c5ff",
+              "error-container": "#fdeaea",
+              "surface-container-lowest": "#ffffff",
+              "on-primary": "#ffffff",
+              "background": "#f8f9fa",
+              "on-secondary-container": "#4b5563",
+              "primary-fixed-dim": "#b4c5ff",
+              "on-tertiary-container": "#065f46",
+              "on-tertiary-fixed": "#7a5000",
+              "on-primary-fixed": "#00174c",
+              "surface-container-low": "#f8f9fa",
+              "inverse-surface": "#0f1115",
+              "surface-variant": "#dee2e6",
+              "surface-tint": "#0055e5",
+              "secondary-container": "#f3f4f6",
+              "on-primary-container": "#003aaa"
+            },
+            fontFamily: {
+              "headline": ["Noto Sans JP", "sans-serif"],
+              "body": ["Noto Sans JP", "sans-serif"],
+              "label": ["Rajdhani", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0px", "lg": "0px", "xl": "0px", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        body { font-family: 'Noto Sans JP', sans-serif; }
+        .technical-label { font-family: 'Rajdhani', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-20">
+<!-- TopAppBar -->
+<header class="bg-white border-b border-outline-variant flex justify-between items-center w-full px-4 h-14 sticky top-0 z-50">
+<div class="flex items-center gap-2">
+<h1 class="text-xl font-black tracking-tighter text-primary font-headline">回顧AI</h1>
+</div>
+<div class="flex items-center">
+<button class="flex items-center gap-1.5 p-2 hover:bg-surface-container-low transition-colors rounded-lg active:scale-95 duration-100">
+<span class="text-[12px] font-bold text-on-surface-variant">ほかの週を見る</span>
+<span class="material-symbols-outlined text-on-surface-variant">calendar_month</span>
+</button>
+</div>
+</header>
+<main class="max-w-md mx-auto">
+<!-- Week Selector -->
+<div class="bg-white px-4 pt-4 border-b border-outline-variant">
+<div class="flex gap-4">
+<button class="flex-1 pb-3 text-center text-on-surface-variant opacity-60">
+<span class="block text-[10px] technical-label font-bold uppercase tracking-widest">Next Week</span>
+<span class="text-sm font-bold">来週</span>
+<span class="block text-[10px] technical-label">05/25 - 05/26</span>
+</button>
+<button class="flex-1 pb-3 text-center border-b-2 border-primary text-primary">
+<span class="block text-[10px] technical-label font-bold uppercase tracking-widest">This Week</span>
+<span class="text-sm font-bold">今週</span>
+<span class="block text-[10px] technical-label">05/18 - 05/19</span>
+</button>
+</div>
+</div>
+<!-- Day Tabs (Pill style) -->
+<div class="px-4 py-4 flex gap-2">
+<button class="px-6 py-1.5 rounded-full bg-white border border-outline text-on-surface-variant text-sm font-bold active:scale-95 transition-all">
+            土曜日
+        </button>
+<button class="px-6 py-1.5 rounded-full bg-primary text-white text-sm font-bold shadow-sm active:scale-95 transition-all">
+            日曜日
+        </button>
+</div>
+<!-- Venue Horizontal Scroll -->
+<section class="mb-8">
+<div class="flex overflow-x-auto gap-4 px-4 no-scrollbar snap-x">
+<!-- Nakayama Card -->
+<div class="min-w-[290px] snap-center bg-white border border-outline overflow-hidden flex-shrink-0 shadow-sm">
+<div class="p-4 border-b border-outline-variant flex justify-between items-end">
+<div class="flex items-baseline gap-2">
+<h2 class="text-xl font-black font-headline tracking-tight">中山</h2>
+</div>
+<span class="bg-surface-container-high px-2 py-0.5 text-[10px] technical-label font-bold">2回 中山 8日</span>
+</div>
+<div class="p-4 space-y-4">
+<!-- Race 11 (Main) -->
+<div class="flex items-center gap-4">
+<div class="w-9 h-9 bg-on-surface text-white flex items-center justify-center font-bold technical-label text-sm">11</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2">
+<span class="bg-[#f59e0b] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-sm">G1</span>
+<h3 class="font-bold text-sm truncate tracking-tight">皐月賞</h3>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<span class="text-[11px] text-on-surface-variant technical-label font-medium tracking-tight">2000m / Turf</span>
+</div>
+</div>
+</div>
+<!-- Race 12 -->
+<div class="flex items-center gap-4 opacity-90">
+<div class="w-9 h-9 bg-surface-container-highest text-on-surface-variant flex items-center justify-center font-bold technical-label text-sm">12</div>
+<div class="flex-1 min-w-0">
+<h3 class="font-bold text-sm truncate tracking-tight">サンシャインS</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="text-[11px] text-on-surface-variant technical-label font-medium tracking-tight">2500m / Turf</span>
+</div>
+</div>
+</div>
+<!-- Race 10 -->
+<div class="flex items-center gap-4 opacity-90">
+<div class="w-9 h-9 bg-surface-container-highest text-on-surface-variant flex items-center justify-center font-bold technical-label text-sm">10</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2">
+<span class="border border-outline text-on-surface-variant text-[10px] font-bold px-1.5 py-0.5 rounded-sm uppercase technical-label">OP</span>
+<h3 class="font-bold text-sm truncate tracking-tight">京葉ステークス</h3>
+</div>
+<div class="flex items-center gap-2 mt-1 text-[11px] text-on-surface-variant technical-label font-medium">1200m / Dirt</div>
+</div>
+</div>
+</div>
+<button class="w-full py-3 bg-surface-container-low text-primary text-[10px] font-bold technical-label uppercase tracking-widest border-t border-outline-variant hover:bg-primary-container transition-colors">
+                    View all 12 Races
+                </button>
+</div>
+<!-- Hanshin Card -->
+<div class="min-w-[290px] snap-center bg-white border border-outline overflow-hidden flex-shrink-0 shadow-sm">
+<div class="p-4 border-b border-outline-variant flex justify-between items-end">
+<div class="flex items-baseline gap-2">
+<h2 class="text-xl font-black font-headline tracking-tight">阪神</h2>
+</div>
+<span class="bg-surface-container-high px-2 py-0.5 text-[10px] technical-label font-bold">2回 阪神 8日</span>
+</div>
+<div class="p-4 space-y-4">
+<div class="flex items-center gap-4">
+<div class="w-9 h-9 bg-on-surface text-white flex items-center justify-center font-bold technical-label text-sm">11</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2">
+<span class="bg-on-surface-variant text-white text-[10px] font-bold px-1.5 py-0.5 rounded-sm">G3</span>
+<h3 class="font-bold text-sm truncate tracking-tight">アンタレスS</h3>
+</div>
+<div class="flex items-center gap-2 mt-1 text-[11px] text-on-surface-variant technical-label font-medium">1800m / Dirt</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-9 h-9 bg-surface-container-highest text-on-surface-variant flex items-center justify-center font-bold technical-label text-sm">12</div>
+<div class="flex-1 min-w-0">
+<h3 class="font-bold text-sm truncate tracking-tight">4歳以上2勝クラス</h3>
+<div class="flex items-center gap-2 mt-1 text-[11px] text-on-surface-variant technical-label font-medium">1400m / Turf</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-9 h-9 bg-surface-container-highest text-on-surface-variant flex items-center justify-center font-bold technical-label text-sm">10</div>
+<div class="flex-1 min-w-0">
+<h3 class="font-bold text-sm truncate tracking-tight">立雲峡ステークス</h3>
+<div class="flex items-center gap-2 mt-1 text-[11px] text-on-surface-variant technical-label font-medium">1600m / Turf</div>
+</div>
+</div>
+</div>
+<button class="w-full py-3 bg-surface-container-low text-primary text-[10px] font-bold technical-label uppercase tracking-widest border-t border-outline-variant">
+                    View all 12 Races
+                </button>
+</div>
+</div>
+</section>
+<!-- Information Section -->
+<section class="px-4 mb-12">
+<div class="flex items-end justify-between mb-4">
+<h2 class="font-black text-xl font-headline tracking-tight">お知らせ</h2>
+<span class="text-[10px] technical-label font-bold text-on-surface-variant opacity-60 tracking-widest">INFORMATION</span>
+</div>
+<div class="bg-white border border-outline divide-y divide-outline-variant overflow-hidden shadow-sm">
+<a class="p-4 block hover:bg-surface-container-low transition-colors group" href="#">
+<div class="flex items-center gap-3">
+<span class="text-[10px] technical-label font-bold text-primary tracking-wider">2024.05.15</span>
+<span class="bg-primary-container text-on-primary-container text-[10px] font-bold px-1.5 py-0.5 uppercase technical-label">Update</span>
+</div>
+<p class="text-sm font-medium mt-1.5 group-hover:text-primary transition-colors leading-relaxed">新機能：AIによるレース直後評価の精度が向上しました。</p>
+</a>
+<a class="p-4 block hover:bg-surface-container-low transition-colors group" href="#">
+<div class="flex items-center gap-3">
+<span class="text-[10px] technical-label font-bold text-on-surface-variant tracking-wider">2024.05.12</span>
+<span class="bg-surface-container-highest text-on-surface-variant text-[10px] font-bold px-1.5 py-0.5 uppercase technical-label">Maintenance</span>
+</div>
+<p class="text-sm font-medium mt-1.5 group-hover:text-primary transition-colors leading-relaxed">5/20 深夜2:00よりサーバーメンテナンスを実施します。</p>
+</a>
+<a class="p-4 block hover:bg-surface-container-low transition-colors group" href="#">
+<div class="flex items-center gap-3">
+<span class="text-[10px] technical-label font-bold text-on-surface-variant tracking-wider">2024.05.10</span>
+<span class="bg-tertiary-container text-on-tertiary-container text-[10px] font-bold px-1.5 py-0.5 uppercase technical-label">Feature</span>
+</div>
+<p class="text-sm font-medium mt-1.5 group-hover:text-primary transition-colors leading-relaxed">「能力比較」ツールに新指標が追加されました。</p>
+</a>
+</div>
+<button class="w-full mt-4 py-3 text-[10px] font-bold technical-label uppercase tracking-widest text-on-surface-variant border border-dashed border-outline hover:border-primary hover:text-primary transition-all">
+            Show more updates
+        </button>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center h-16 pb-safe bg-white border-t border-outline-variant shadow-md z-50">
+<a class="flex flex-col items-center justify-center text-primary flex-1 h-full border-b-2 border-primary" href="#">
+<span class="material-symbols-outlined mb-0.5" data-icon="Format_list_bulleted">format_list_bulleted</span>
+<span class="text-[10px] font-bold">レース</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 flex-1 h-full hover:opacity-100 transition-opacity" href="#">
+<span class="material-symbols-outlined mb-0.5" data-icon="analytics">analytics</span>
+<span class="text-[10px] font-bold">能力比較</span>
+</a>
+</nav>
+</body></html>
