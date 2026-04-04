@@ -1,0 +1,5 @@
+.env
+output_*.json
+raw_response_*.txt
+transcript_*.txt
+*.save
