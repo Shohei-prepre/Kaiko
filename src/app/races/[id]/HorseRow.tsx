@@ -116,7 +116,7 @@ export default function HorseRow({ perf, isFirst = false }: Props) {
               <span className="font-[family-name:var(--font-rajdhani)] text-[9px] font-black text-[var(--kaiko-text-muted)] block mb-1">展開</span>
               <div className="flex items-baseline gap-1">
                 <span className="text-[11px] font-black text-[var(--kaiko-primary)]">
-                  {perf.pace_effect_value >= 0 ? "+" : ""}{perf.pace_effect_value.toFixed(1)}馬身
+                  {(perf.pace_effect_value ?? 0) >= 0 ? "+" : ""}{(perf.pace_effect_value ?? 0).toFixed(1)}馬身
                 </span>
                 <span className="text-[10px] font-bold text-[var(--kaiko-text-sub)]">
                   {perf.pace_effect_summary ?? "—"}
@@ -127,7 +127,7 @@ export default function HorseRow({ perf, isFirst = false }: Props) {
               <span className="font-[family-name:var(--font-rajdhani)] text-[9px] font-black text-[var(--kaiko-text-muted)] block mb-1">トラックB</span>
               <div className="flex items-baseline gap-1">
                 <span className="text-[11px] font-black text-[var(--kaiko-primary)]">
-                  {perf.track_condition_value >= 0 ? "+" : ""}{perf.track_condition_value.toFixed(1)}馬身
+                  {(perf.track_condition_value ?? 0) >= 0 ? "+" : ""}{(perf.track_condition_value ?? 0).toFixed(1)}馬身
                 </span>
                 <span className="text-[10px] font-bold text-[var(--kaiko-text-sub)]">
                   {perf.track_condition_summary ?? "—"}

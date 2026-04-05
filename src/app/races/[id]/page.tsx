@@ -16,10 +16,10 @@ async function getRace(id: string): Promise<RaceWithPerformances | null> {
       *,
       horse_performances (
         *,
-        horses ( id, name, born_year, trainer )
+        horses ( horse_id, name, born_year, trainer )
       )
     `)
-    .eq("id", id)
+    .eq("race_id", id)
     .single();
 
   if (error || !data) return null;

@@ -4,7 +4,7 @@ export type TrackCondition = "良" | "稍重" | "重" | "不良";
 export type Grade = "G1" | "G2" | "G3" | "OP" | "3勝" | "2勝" | "1勝" | "未勝利" | "新馬";
 
 export interface Race {
-  id: string;
+  race_id: string;
   race_name: string;
   race_date: string;
   track: string;
@@ -14,6 +14,8 @@ export interface Race {
   track_condition: TrackCondition;
   lap_times: number[] | null;
   pace: string | null;
+  race_number: number | null;
+  kai_nichi: string | null;
   track_bias_level: string | null;
   track_bias_value: number | null;
   track_bias_summary: string | null;
@@ -26,37 +28,37 @@ export interface Race {
 }
 
 export interface Horse {
-  id: string;
+  horse_id: number;
   name: string;
   born_year: number | null;
   trainer: string | null;
 }
 
 export interface HorsePerformance {
-  id: string;
+  id: number;
   race_id: string;
-  horse_id: string;
+  horse_id: number;
   finish_order: number;
   margin: number | null;
   weight_carried: number | null;
-  horse_weight: number | null;
+  horse_weight: string | null;
   position_order: string | null;
   frame_number: number | null;
   horse_number: number | null;
   trouble_level: string | null;
-  trouble_value: number;
+  trouble_value: number | null;
   trouble_summary: string | null;
   temperament_level: string | null;
-  temperament_value: number;
+  temperament_value: number | null;
   temperament_summary: string | null;
   weight_effect_level: string | null;
-  weight_effect_value: number;
+  weight_effect_value: number | null;
   weight_effect_summary: string | null;
   track_condition_level: string | null;
-  track_condition_value: number;
+  track_condition_value: number | null;
   track_condition_summary: string | null;
   pace_effect_level: string | null;
-  pace_effect_value: number;
+  pace_effect_value: number | null;
   pace_effect_summary: string | null;
   eval_tag: EvalTag | null;
   horses?: Horse;
@@ -66,20 +68,19 @@ export interface RaceWithPerformances extends Race {
   horse_performances: HorsePerformance[];
 }
 
-// フロントエンドで計算する値
+// フロントエンドで計算する値（null は 0 扱い）
 export function calcAptitudeValue(p: HorsePerformance): number {
-  return p.track_condition_value + p.pace_effect_value;
+  return (p.track_condition_value ?? 0) + (p.pace_effect_value ?? 0);
 }
 
 export function calcLossValue(p: HorsePerformance): number {
-  return p.trouble_value + p.temperament_value + p.weight_effect_value;
+  return (p.trouble_value ?? 0) + (p.temperament_value ?? 0) + (p.weight_effect_value ?? 0);
 }
 
 export function calcAbilityValue(p: HorsePerformance): number {
   return calcAptitudeValue(p) + calcLossValue(p);
 }
 
-// abilityValue から評価記号を返す
 export function abilitySymbol(value: number): string {
   if (value >= 2.0) return "◎";
   if (value >= 1.0) return "○";
@@ -87,7 +88,6 @@ export function abilitySymbol(value: number): string {
   return "×";
 }
 
-export type SymbolColor = "great" | "good" | "fair" | "bad";
 export function symbolColorClass(symbol: string): string {
   switch (symbol) {
     case "◎": return "text-[var(--kaiko-sym-good)]";

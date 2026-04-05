@@ -24,10 +24,10 @@ async function getHorse(id: string): Promise<HorseWithPerformances | null> {
       *,
       horse_performances (
         *,
-        races ( id, race_name, race_date, track, distance, surface, grade, track_condition )
+        races ( race_id, race_name, race_date, track, distance, surface, grade, track_condition )
       )
     `)
-    .eq("id", id)
+    .eq("horse_id", id)
     .single();
 
   if (error || !data) return null;
@@ -137,7 +137,7 @@ export default async function HorsePage({ params }: Props) {
               return (
                 <Link
                   key={perf.id}
-                  href={`/races/${race.id}`}
+                  href={`/races/${race.race_id}`}
                   className={`flex items-center gap-3 px-4 py-4 hover:bg-gray-50 active:bg-gray-100 transition-colors ${i < perfs.length - 1 ? "border-b border-[var(--kaiko-border)]" : ""}`}
                 >
                   {/* 着順 */}

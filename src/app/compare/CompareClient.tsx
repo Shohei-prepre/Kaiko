@@ -26,20 +26,6 @@ interface HorseOption {
 }
 
 // 物差し馬ロジック: 馬Aと馬Bに共通して出走した馬を探す
-function findBenchmarkCandidates(
-  perfsA: PerfWithRace[],
-  perfsB: PerfWithRace[]
-): string[] {
-  const raceIdsA = new Set(perfsA.map((p) => p.race_id));
-  const raceIdsB = new Set(perfsB.map((p) => p.race_id));
-
-  // 直接対決レースを探す
-  const directRaces = [...raceIdsA].filter((id) => raceIdsB.has(id));
-  if (directRaces.length > 0) return []; // 直接対決あり → 物差し馬不要
-
-  return []; // 共通馬は別途取得
-}
-
 // 補正後能力差を計算（馬身）
 function calcAdjustedDiff(
   perfA: PerfWithRace,
@@ -49,18 +35,18 @@ function calcAdjustedDiff(
   const baseDiff = (perfB.finish_order - perfA.finish_order) * 0.5; // 着差ベース（仮）
 
   const corrA =
-    perfA.weight_effect_value +
-    perfA.track_condition_value +
-    perfA.pace_effect_value +
-    perfA.trouble_value +
-    perfA.temperament_value;
+    (perfA.weight_effect_value ?? 0) +
+    (perfA.track_condition_value ?? 0) +
+    (perfA.pace_effect_value ?? 0) +
+    (perfA.trouble_value ?? 0) +
+    (perfA.temperament_value ?? 0);
 
   const corrB =
-    perfB.weight_effect_value +
-    perfB.track_condition_value +
-    perfB.pace_effect_value +
-    perfB.trouble_value +
-    perfB.temperament_value;
+    (perfB.weight_effect_value ?? 0) +
+    (perfB.track_condition_value ?? 0) +
+    (perfB.pace_effect_value ?? 0) +
+    (perfB.trouble_value ?? 0) +
+    (perfB.temperament_value ?? 0);
 
   return baseDiff + corrA - corrB + raceTrackBias;
 }
@@ -97,13 +83,13 @@ function formatVal(v: number): string {
   return `${v >= 0 ? "+" : ""}${v.toFixed(1)}`;
 }
 
-async function fetchHorseOption(id: string): Promise<HorseOption | null> {
+async function fetchHorseOption(id: number): Promise<HorseOption | null> {
   const supabase = getSupabase();
 
   const { data: horse } = await supabase
     .from("horses")
     .select("*")
-    .eq("id", id)
+    .eq("horse_id", id)
     .single();
 
   if (!horse) return null;
@@ -138,7 +124,7 @@ function HorseSelectModal({
   onSelect,
   onClose,
 }: {
-  onSelect: (id: string) => void;
+  onSelect: (id: number) => void;
   onClose: () => void;
 }) {
   const [query, setQuery] = useState("");
@@ -170,9 +156,9 @@ function HorseSelectModal({
         <div className="overflow-y-auto flex-1 divide-y divide-[var(--kaiko-border)]">
           {results.map((h) => (
             <button
-              key={h.id}
+              key={h.horse_id}
               className="w-full text-left px-2 py-3 text-sm font-bold hover:bg-gray-50"
-              onClick={() => { onSelect(h.id); onClose(); }}
+              onClick={() => { onSelect(h.horse_id); onClose(); }}
             >
               {h.name}
             </button>
@@ -198,11 +184,11 @@ export default function CompareClient() {
   useEffect(() => {
     const horseId = searchParams.get("horse");
     if (horseId) {
-      fetchHorseOption(horseId).then((opt) => { if (opt) setHorseA(opt); });
+      fetchHorseOption(Number(horseId)).then((opt) => { if (opt) setHorseA(opt); });
     }
   }, [searchParams]);
 
-  const handleSelectHorse = useCallback(async (id: string) => {
+  const handleSelectHorse = useCallback(async (id: number) => {
     const opt = await fetchHorseOption(id);
     if (!opt) return;
     if (modal === "A") setHorseA(opt);
@@ -232,7 +218,7 @@ export default function CompareClient() {
     }
   }
 
-  const tabs = ["統合評価", ...(tabRaces.map((r, i) => `レース${i + 1}`))];
+  const tabs = ["統合評価", ...(tabRaces.map((_, i) => `レース${i + 1}`))];
 
   return (
     <>

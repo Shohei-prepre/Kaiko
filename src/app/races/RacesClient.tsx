@@ -173,7 +173,7 @@ export default function RacesClient() {
                       {mainRaces.map((race, i) => {
                         const isMain = i === 0;
                         return (
-                          <Link key={race.id} href={`/races/${race.id}`} className="flex items-center gap-4 hover:opacity-80 transition-opacity">
+                          <Link key={race.race_id} href={`/races/${race.race_id}`} className="flex items-center gap-4 hover:opacity-80 transition-opacity">
                             <div className={`w-9 h-9 flex items-center justify-center font-bold font-[family-name:var(--font-rajdhani)] text-sm flex-shrink-0 ${isMain ? "bg-[var(--kaiko-on-surface)] text-white" : "bg-gray-200 text-[var(--kaiko-on-surface-variant)]"}`}>
                               {String(mainRaces.indexOf(race) + 9).padStart(2, " ")}
                             </div>
