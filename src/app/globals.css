@@ -175,4 +175,10 @@
   html {
     @apply font-sans;
   }
+  /* iOS Safari: タップ遅延・無反応を防ぐ */
+  a, button, [role="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
+  }
 }

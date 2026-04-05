@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
@@ -108,16 +108,26 @@ async function fetchHorseOption(id: number): Promise<HorseOption | null> {
   };
 }
 
-async function searchHorses(query: string): Promise<Horse[]> {
-  if (!query.trim()) return [];
-  const supabase = getSupabase();
-  const { data } = await supabase
-    .from("horses")
-    .select("*")
-    .ilike("name", `%${query}%`)
-    .limit(10);
-  return (data ?? []) as Horse[];
-}
+// かな行フィルター定義
+const KANA_ROWS = [
+  { label: "ア", chars: "アイウエオ" },
+  { label: "カ", chars: "カキクケコガギグゲゴ" },
+  { label: "サ", chars: "サシスセソザジズゼゾ" },
+  { label: "タ", chars: "タチツテトダヂヅデド" },
+  { label: "ナ", chars: "ナニヌネノ" },
+  { label: "ハ", chars: "ハヒフヘホバビブベボパピプペポ" },
+  { label: "マ", chars: "マミムメモ" },
+  { label: "ヤ", chars: "ヤユヨ" },
+  { label: "ラ", chars: "ラリルレロ" },
+  { label: "ワ", chars: "ワヲン" },
+];
+
+const EVAL_DOT: Record<string, string> = {
+  below: "bg-emerald-500",
+  above: "bg-amber-400",
+  fair: "bg-blue-400",
+  disregard: "bg-gray-300",
+};
 
 // 馬選択モーダル
 function HorseSelectModal({
@@ -127,47 +137,182 @@ function HorseSelectModal({
   onSelect: (id: number) => void;
   onClose: () => void;
 }) {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<Horse[]>([]);
+  const [tab, setTab] = useState<"race" | "name">("race");
+
+  // ── レースタブ ──
+  const [races, setRaces] = useState<Race[]>([]);
+  const [selectedRace, setSelectedRace] = useState<Race | null>(null);
+  const [raceHorses, setRaceHorses] = useState<{ horse: Horse; finish_order: number; eval_tag: string }[]>([]);
+  const [raceLoading, setRaceLoading] = useState(false);
 
   useEffect(() => {
-    if (!query) { setResults([]); return; }
-    const t = setTimeout(async () => {
-      const horses = await searchHorses(query);
-      setResults(horses);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [query]);
+    const supabase = getSupabase();
+    supabase.from("races").select("race_id,race_name,race_date,track,grade,race_number")
+      .not("race_date", "is", null)
+      .order("race_date", { ascending: false })
+      .limit(60)
+      .then(({ data }) => setRaces((data ?? []) as Race[]));
+  }, []);
+
+  useEffect(() => {
+    if (!selectedRace) return;
+    setRaceLoading(true);
+    const supabase = getSupabase();
+    supabase.from("horse_performances")
+      .select("finish_order, eval_tag, horses(horse_id, name)")
+      .eq("race_id", selectedRace.race_id)
+      .order("finish_order")
+      .then(({ data }) => {
+        setRaceHorses(
+          (data ?? []).map((d: any) => ({
+            horse: d.horses as Horse,
+            finish_order: d.finish_order,
+            eval_tag: d.eval_tag ?? "fair",
+          }))
+        );
+        setRaceLoading(false);
+      });
+  }, [selectedRace]);
+
+  // ── 馬名タブ ──
+  const [allHorses, setAllHorses] = useState<Horse[]>([]);
+  const [query, setQuery] = useState("");
+  const [activeRow, setActiveRow] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (tab !== "name" || allHorses.length > 0) return;
+    const supabase = getSupabase();
+    supabase.from("horses").select("*").order("name")
+      .then(({ data }) => setAllHorses((data ?? []) as Horse[]));
+  }, [tab, allHorses.length]);
+
+  const filteredHorses = useMemo(() => {
+    let list = allHorses;
+    if (activeRow) {
+      const row = KANA_ROWS.find((r) => r.label === activeRow);
+      if (row) list = list.filter((h) => row.chars.includes(h.name[0]));
+    }
+    if (query) list = list.filter((h) => h.name.includes(query));
+    return list;
+  }, [allHorses, activeRow, query]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-end">
-      <div className="bg-white w-full rounded-t-2xl p-4 space-y-3 max-h-[70vh] flex flex-col">
-        <div className="flex justify-between items-center">
-          <h3 className="font-bold text-[var(--kaiko-text-main)]">馬を選択</h3>
-          <button onClick={onClose} className="material-symbols-outlined text-[var(--kaiko-text-muted)]">close</button>
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-end" onClick={onClose}>
+      <div className="bg-white w-full rounded-t-2xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        {/* ヘッダー */}
+        <div className="flex justify-between items-center px-4 py-3 border-b border-[var(--kaiko-border)]">
+          {tab === "race" && selectedRace ? (
+            <button onClick={() => { setSelectedRace(null); setRaceHorses([]); }}
+              className="flex items-center gap-1 text-sm font-bold text-[var(--kaiko-primary)]">
+              <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+              レース一覧
+            </button>
+          ) : (
+            <h3 className="font-bold text-[var(--kaiko-text-main)]">馬を選択</h3>
+          )}
+          <button onClick={onClose}>
+            <span className="material-symbols-outlined text-[var(--kaiko-text-muted)]">close</span>
+          </button>
         </div>
-        <input
-          className="w-full border border-[var(--kaiko-border)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[var(--kaiko-primary)]"
-          placeholder="馬名を入力..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          autoFocus
-        />
-        <div className="overflow-y-auto flex-1 divide-y divide-[var(--kaiko-border)]">
-          {results.map((h) => (
-            <button
-              key={h.horse_id}
-              className="w-full text-left px-2 py-3 text-sm font-bold hover:bg-gray-50"
-              onClick={() => { onSelect(h.horse_id); onClose(); }}
-            >
-              {h.name}
+
+        {/* タブ切替 */}
+        <div className="flex border-b border-[var(--kaiko-border)]">
+          {(["race", "name"] as const).map((t) => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`flex-1 py-2.5 text-[12px] font-bold transition-colors ${tab === t ? "border-b-2 border-[var(--kaiko-primary)] text-[var(--kaiko-primary)]" : "text-[var(--kaiko-text-muted)]"}`}>
+              {t === "race" ? "レースから選ぶ" : "馬名から選ぶ"}
             </button>
           ))}
-          {query && results.length === 0 && (
-            <p className="py-6 text-center text-sm text-[var(--kaiko-text-muted)]">見つかりませんでした</p>
-          )}
         </div>
+
+        {/* ── レースタブ ── */}
+        {tab === "race" && (
+          <div className="overflow-y-auto flex-1">
+            {!selectedRace ? (
+              /* レース一覧 */
+              races.map((race) => (
+                <button key={race.race_id} onClick={() => setSelectedRace(race)}
+                  className="w-full flex items-center gap-3 px-4 py-3 border-b border-[var(--kaiko-border)] hover:bg-gray-50 text-left">
+                  <div className="flex-shrink-0 text-center">
+                    <span className="text-[11px] font-bold text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] block">
+                      {race.race_date ? race.race_date.slice(2).replace(/-/g, "/") : "—"}
+                    </span>
+                    <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)]">{race.track}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-bold text-[var(--kaiko-text-main)] truncate block">{race.race_name}</span>
+                    <span className="text-[11px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] font-bold">
+                      R{race.race_number}
+                    </span>
+                  </div>
+                  <span className="material-symbols-outlined text-[16px] text-[var(--kaiko-text-muted)] flex-shrink-0">chevron_right</span>
+                </button>
+              ))
+            ) : (
+              /* 出走馬一覧 */
+              <>
+                <div className="px-4 py-2 bg-gray-50 border-b border-[var(--kaiko-border)]">
+                  <p className="text-[11px] font-bold text-[var(--kaiko-text-muted)]">
+                    {selectedRace.race_date?.slice(5).replace("-", "/")} {selectedRace.track} {selectedRace.race_name}
+                  </p>
+                </div>
+                {raceLoading ? (
+                  <p className="py-8 text-center text-sm text-[var(--kaiko-text-muted)]">読み込み中...</p>
+                ) : raceHorses.map(({ horse, finish_order, eval_tag }) => (
+                  <button key={horse.horse_id}
+                    onClick={() => { onSelect(horse.horse_id); onClose(); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 border-b border-[var(--kaiko-border)] hover:bg-gray-50 text-left">
+                    <span className="text-base font-black text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] w-6 text-right flex-shrink-0">
+                      {finish_order === 99 ? "中" : finish_order}
+                    </span>
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${EVAL_DOT[eval_tag] ?? "bg-gray-300"}`} />
+                    <span className="text-sm font-bold text-[var(--kaiko-text-main)]">{horse.name}</span>
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── 馬名タブ ── */}
+        {tab === "name" && (
+          <>
+            {/* かな行フィルター */}
+            <div className="flex gap-1 px-3 py-2 border-b border-[var(--kaiko-border)] overflow-x-auto no-scrollbar">
+              {KANA_ROWS.map(({ label }) => (
+                <button key={label} onClick={() => setActiveRow(activeRow === label ? null : label)}
+                  className={`flex-shrink-0 w-8 h-8 rounded-full text-[12px] font-bold transition-colors ${activeRow === label ? "bg-[var(--kaiko-primary)] text-white" : "bg-gray-100 text-[var(--kaiko-text-muted)]"}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {/* 検索 */}
+            <div className="px-3 py-2 border-b border-[var(--kaiko-border)]">
+              <input
+                className="w-full border border-[var(--kaiko-border)] rounded-xl px-3 py-2 text-sm outline-none focus:border-[var(--kaiko-primary)]"
+                placeholder="馬名で絞り込み..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+            {/* 馬一覧 */}
+            <div className="overflow-y-auto flex-1 divide-y divide-[var(--kaiko-border)]">
+              {filteredHorses.length === 0 ? (
+                <p className="py-8 text-center text-sm text-[var(--kaiko-text-muted)]">
+                  {allHorses.length === 0 ? "読み込み中..." : "見つかりませんでした"}
+                </p>
+              ) : filteredHorses.map((h) => (
+                <button key={h.horse_id}
+                  className="w-full text-left px-4 py-3 text-sm font-bold hover:bg-gray-50"
+                  onClick={() => { onSelect(h.horse_id); onClose(); }}>
+                  {h.name}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
+      <style>{`.no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}`}</style>
     </div>
   );
 }
