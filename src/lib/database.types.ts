@@ -98,6 +98,52 @@ export function symbolColorClass(symbol: string): string {
   }
 }
 
+// ────────── 出走前（upcoming）────────────────────────────────────────────────
+
+export interface UpcomingRace {
+  race_id: string;
+  race_name: string;
+  race_date: string;
+  track: string;
+  distance: number;
+  surface: Surface;
+  grade: Grade;
+  race_number: number | null;
+  head_count: number | null;
+  odds_updated_at: string | null;
+}
+
+export interface UpcomingEntry {
+  id: number;
+  race_id: string;
+  horse_id: number | null;
+  horse_name: string;
+  frame_number: number | null;
+  horse_number: number | null;
+  jockey: string | null;
+  weight_carried: number | null;
+  odds: number | null;
+  popularity: number | null;
+}
+
+export interface RecentPerf {
+  race_name: string;
+  race_date: string;
+  finish_order: number;
+  margin: number | null;
+  eval_tag: EvalTag | null;
+}
+
+export interface UpcomingEntryWithForm extends UpcomingEntry {
+  recentPerfs: RecentPerf[];
+}
+
+/** 近走の実力以下が 2走以上 → 次走買い候補 */
+export function isBuyCandidate(recentPerfs: RecentPerf[]): boolean {
+  const valid = recentPerfs.filter((p) => p.eval_tag !== "disregard");
+  return valid.filter((p) => p.eval_tag === "below").length >= 2;
+}
+
 export type Database = {
   public: {
     Tables: {

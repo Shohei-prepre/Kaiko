@@ -15,12 +15,14 @@ function getWeekRange(weekOffset = 0): { sat: string; sun: string; label: string
   const sun = new Date(sat);
   sun.setDate(sat.getDate() + 1);
 
+  const toLocalDateStr = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const fmt = (d: Date) =>
     `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
 
   return {
-    sat: sat.toISOString().slice(0, 10),
-    sun: sun.toISOString().slice(0, 10),
+    sat: toLocalDateStr(sat),
+    sun: toLocalDateStr(sun),
     label: `${fmt(sat)} - ${fmt(sun)}`,
   };
 }
@@ -29,6 +31,60 @@ interface VenueGroup {
   track: string;
   races: Race[];
 }
+
+interface UpcomingRace {
+  race_id?: string;       // DBから取得した場合のみ存在
+  race_number: number;
+  race_name: string;
+  grade: string;
+  distance: number;
+  surface: "芝" | "ダート" | "障";
+}
+
+interface UpcomingVenue {
+  track: string;
+  races: UpcomingRace[];
+}
+
+// mock: 来週のレース予告データ（DBに実データが入ったら自動的にそちら優先）
+const MOCK_UPCOMING: Record<string, UpcomingVenue[]> = {
+  "SATURDAY": [
+    {
+      track: "中山",
+      races: [
+        { race_number: 11, race_name: "ニュージーランドトロフィー", grade: "G2", distance: 1600, surface: "芝" },
+        { race_number: 10, race_name: "春雷ステークス", grade: "OP", distance: 1200, surface: "芝" },
+        { race_number: 9,  race_name: "3歳500万下", grade: "—", distance: 1800, surface: "芝" },
+      ],
+    },
+    {
+      track: "阪神",
+      races: [
+        { race_number: 11, race_name: "阪神牝馬ステークス", grade: "G2", distance: 1600, surface: "芝" },
+        { race_number: 10, race_name: "阪神ダービートライアル", grade: "OP", distance: 1800, surface: "ダート" },
+        { race_number: 9,  race_name: "4歳以上1000万下", grade: "—", distance: 2000, surface: "芝" },
+      ],
+    },
+  ],
+  "SUNDAY": [
+    {
+      track: "中山",
+      races: [
+        { race_number: 11, race_name: "皐月賞", grade: "G1", distance: 2000, surface: "芝" },
+        { race_number: 10, race_name: "中山グランドジャンプ", grade: "G1", distance: 4250, surface: "障" },
+        { race_number: 9,  race_name: "4歳以上1600万下", grade: "—", distance: 2200, surface: "芝" },
+      ],
+    },
+    {
+      track: "阪神",
+      races: [
+        { race_number: 11, race_name: "アンタレスステークス", grade: "G3", distance: 1800, surface: "ダート" },
+        { race_number: 10, race_name: "忘れな草賞", grade: "OP", distance: 2000, surface: "芝" },
+        { race_number: 9,  race_name: "3歳500万下", grade: "—", distance: 1600, surface: "芝" },
+      ],
+    },
+  ],
+};
 
 function groupByVenue(races: Race[]): VenueGroup[] {
   const map = new Map<string, Race[]>();
@@ -96,6 +152,9 @@ function WeekSelectModal({
                   {isCurrent && (
                     <span className="ml-2 text-[10px] font-bold text-[var(--kaiko-primary)] font-[family-name:var(--font-rajdhani)] uppercase">This Week</span>
                   )}
+                  {offset === 1 && (
+                    <span className="ml-2 text-[10px] font-bold text-emerald-600 font-[family-name:var(--font-rajdhani)] uppercase">Next Week</span>
+                  )}
                 </div>
                 {isSelected && (
                   <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-[18px]">check</span>
@@ -109,10 +168,92 @@ function WeekSelectModal({
   );
 }
 
+// 未来レース：プレビューカード
+function UpcomingVenueCard({
+  venue,
+  expanded,
+  onToggle,
+}: {
+  venue: UpcomingVenue;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const sorted = [...venue.races].sort((a, b) => {
+    const gradeOrder: Record<string, number> = { G1: 0, G2: 1, G3: 2, OP: 3 };
+    const ga = gradeOrder[a.grade] ?? 4;
+    const gb = gradeOrder[b.grade] ?? 4;
+    if (ga !== gb) return ga - gb;
+    return b.race_number - a.race_number;
+  });
+  const display = expanded ? sorted : sorted.slice(0, 3);
+
+  return (
+    <div className="bg-white border border-[var(--kaiko-outline-variant)] shadow-sm">
+      <div className="px-4 py-3 border-b border-[var(--kaiko-outline-variant)] flex justify-between items-center">
+        <h2 className="text-xl font-black font-[family-name:var(--font-noto-sans-jp)] tracking-tight">{venue.track}</h2>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 font-[family-name:var(--font-rajdhani)] uppercase tracking-wider">
+            UPCOMING
+          </span>
+          <span className="text-[11px] font-bold text-[var(--kaiko-on-surface-variant)] font-[family-name:var(--font-rajdhani)]">
+            {venue.races.length} RACES
+          </span>
+        </div>
+      </div>
+      <div className="divide-y divide-[var(--kaiko-outline-variant)]">
+        {display.map((race) => {
+          const inner = (
+            <>
+              <div className="w-8 h-8 flex items-center justify-center font-bold font-[family-name:var(--font-rajdhani)] text-sm flex-shrink-0 bg-gray-100 text-[var(--kaiko-on-surface-variant)]">
+                {race.race_number}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <GradeBadge grade={race.grade} />
+                  <h3 className="font-bold text-sm truncate tracking-tight">{race.race_name}</h3>
+                </div>
+                <span className="text-[11px] text-[var(--kaiko-on-surface-variant)] font-[family-name:var(--font-rajdhani)] font-medium">
+                  {race.distance}m / {race.surface === "芝" ? "Turf" : race.surface === "ダート" ? "Dirt" : "Hurdle"}
+                </span>
+              </div>
+              <span className="material-symbols-outlined text-[16px] text-[var(--kaiko-on-surface-variant)] flex-shrink-0">
+                chevron_right
+              </span>
+            </>
+          );
+          const cls = "flex items-center gap-3 px-4 py-3 active:opacity-60 transition-opacity";
+          return race.race_id ? (
+            <Link key={race.race_id} href={`/races/upcoming/${race.race_id}`} className={`${cls} hover:bg-gray-50`}>
+              {inner}
+            </Link>
+          ) : (
+            <div key={race.race_number} className={cls}>
+              {inner}
+            </div>
+          );
+        })}
+      </div>
+      {venue.races.length > 3 && (
+        <button
+          onClick={onToggle}
+          className="w-full py-3 text-[var(--kaiko-primary)] text-[11px] font-bold font-[family-name:var(--font-rajdhani)] uppercase tracking-widest border-t border-[var(--kaiko-outline-variant)] flex items-center justify-center gap-1 bg-gray-50 active:opacity-60"
+        >
+          {expanded ? (
+            <>Show Less <span className="material-symbols-outlined text-[14px]">expand_less</span></>
+          ) : (
+            <>View All {venue.races.length} Races <span className="material-symbols-outlined text-[14px]">expand_more</span></>
+          )}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function RacesClient() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [activeDay, setActiveDay] = useState<"sat" | "sun">("sun");
   const [venues, setVenues] = useState<VenueGroup[]>([]);
+  const [upcomingVenues, setUpcomingVenues] = useState<UpcomingVenue[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [expandedVenues, setExpandedVenues] = useState<Set<string>>(new Set());
@@ -130,19 +271,90 @@ export default function RacesClient() {
 
   const dateStr = activeDay === "sat" ? currentWeek.sat : currentWeek.sun;
 
+  // 今日以降（当日含む）は upcoming_races を参照
+  const _now = new Date();
+  const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
+  const isFutureDate = dateStr >= today;
+
   useEffect(() => {
-    setLoading(true);
-    const supabase = getSupabase();
-    supabase
-      .from("races")
-      .select("*")
-      .eq("race_date", dateStr)
-      .order("race_number")
-      .then(({ data }) => {
-        setVenues(groupByVenue((data ?? []) as Race[]));
+    const fallbackMock = MOCK_UPCOMING[activeDay === "sat" ? "SATURDAY" : "SUNDAY"] ?? [];
+
+    if (isFutureDate) {
+      // 未来レースは即座にモックデータを表示（ローディング不要）
+      setVenues([]);
+      setUpcomingVenues(fallbackMock);
+      setLoading(false);
+
+      // バックグラウンドでDBから実データを取得して差し替え（失敗しても表示には影響なし）
+      let cancelled = false;
+      try {
+        const supabase = getSupabase();
+        Promise.resolve(
+          supabase
+            .from("upcoming_races" as never)
+            .select("*")
+            .eq("race_date", dateStr)
+            .order("race_number")
+        ).then(({ data }) => {
+          if (cancelled) return;
+          if (data && (data as {race_id:string}[]).length > 0) {
+            type URow = { race_id: string; race_name: string; grade: string; distance: number; surface: string; track: string; race_number: number };
+            const rows = data as URow[];
+            const map = new Map<string, UpcomingRace[]>();
+            for (const r of rows) {
+              if (!map.has(r.track)) map.set(r.track, []);
+              map.get(r.track)!.push({
+                race_id: r.race_id,
+                race_number: r.race_number ?? 0,
+                race_name: r.race_name,
+                grade: r.grade,
+                distance: r.distance,
+                surface: (r.surface as "芝" | "ダート" | "障") ?? "芝",
+              });
+            }
+            setUpcomingVenues(
+              Array.from(map.entries()).map(([track, races]) => ({ track, races }))
+            );
+          }
+        }).catch(() => { /* モックデータを使い続ける */ });
+      } catch { /* supabase初期化エラー → モックデータを使い続ける */ }
+
+      return () => { cancelled = true; };
+    } else {
+      // 過去レース：ローディング表示してDBから取得
+      setLoading(true);
+      setVenues([]);
+      setUpcomingVenues([]);
+
+      const timeout = setTimeout(() => setLoading(false), 3000);
+      let cancelled = false;
+
+      try {
+        const supabase = getSupabase();
+        Promise.resolve(
+          supabase
+            .from("races")
+            .select("*")
+            .eq("race_date", dateStr)
+            .order("race_number")
+        ).then(({ data }) => {
+          if (cancelled) return;
+          clearTimeout(timeout);
+          setVenues(groupByVenue((data ?? []) as Race[]));
+          setLoading(false);
+        }).catch(() => {
+          if (cancelled) return;
+          clearTimeout(timeout);
+          setLoading(false);
+        });
+      } catch {
+        clearTimeout(timeout);
         setLoading(false);
-      });
-  }, [dateStr]);
+      }
+
+      return () => { cancelled = true; clearTimeout(timeout); };
+    }
+  }, [dateStr, isFutureDate, activeDay]);
 
   return (
     <div className="[&_*]:!rounded-none min-h-screen bg-[#f8f9fa] text-[var(--kaiko-on-surface)] pb-20">
@@ -172,6 +384,7 @@ export default function RacesClient() {
                 <button
                   key={offset}
                   onClick={() => setWeekOffset(offset)}
+                  style={{ touchAction: "manipulation" }}
                   className={`flex-1 pb-3 text-center transition-colors ${
                     isActive
                       ? "border-b-2 border-[var(--kaiko-primary)] text-[var(--kaiko-primary)]"
@@ -201,6 +414,7 @@ export default function RacesClient() {
             <button
               key={day}
               onClick={() => setActiveDay(day)}
+              style={{ touchAction: "manipulation" }}
               className={`px-6 py-1.5 !rounded-full text-sm font-bold active:opacity-70 transition-all ${
                 activeDay === day
                   ? "bg-[var(--kaiko-primary)] text-white shadow-sm"
@@ -212,12 +426,41 @@ export default function RacesClient() {
           ))}
         </div>
 
+        {/* 未来レースの注意バナー */}
+        {isFutureDate && (
+          <div className="mx-4 mb-3 flex items-start gap-2.5 bg-emerald-50 border border-emerald-200 px-3 py-2.5">
+            <span className="material-symbols-outlined text-emerald-600 text-[18px] flex-shrink-0 mt-0.5">upcoming</span>
+            <div>
+              <p className="text-[11px] font-bold text-emerald-700 uppercase font-[family-name:var(--font-rajdhani)] tracking-wider">Upcoming Races</p>
+              <p className="text-[11px] text-emerald-700 leading-relaxed">分析データはレース終了後に公開されます。出走情報は変更になる場合があります。</p>
+            </div>
+          </div>
+        )}
+
         {/* 競馬場カード */}
         <section className="mb-8">
           {loading ? (
             <div className="mx-4 bg-white border border-[var(--kaiko-outline-variant)] p-8 text-center text-sm text-[var(--kaiko-text-muted)]">
               読み込み中...
             </div>
+          ) : isFutureDate ? (
+            // 未来レース：プレビュー表示
+            upcomingVenues.length === 0 ? (
+              <div className="mx-4 bg-white border border-[var(--kaiko-outline-variant)] p-8 text-center">
+                <p className="text-sm text-[var(--kaiko-text-muted)]">出走前データがありません</p>
+              </div>
+            ) : (
+              <div className="space-y-3 px-4">
+                {upcomingVenues.map((venue) => (
+                  <UpcomingVenueCard
+                    key={venue.track}
+                    venue={venue}
+                    expanded={expandedVenues.has(venue.track)}
+                    onToggle={() => toggleVenue(venue.track)}
+                  />
+                ))}
+              </div>
+            )
           ) : venues.length === 0 ? (
             <div className="mx-4 bg-white border border-[var(--kaiko-outline-variant)] p-8 text-center">
               <p className="text-sm text-[var(--kaiko-text-muted)] mb-2">レースデータがありません</p>
@@ -226,6 +469,7 @@ export default function RacesClient() {
               </button>
             </div>
           ) : (
+            // 過去・今週レース：通常表示
             <div className="space-y-3 px-4">
               {venues.map((venue) => {
                 const isExpanded = expandedVenues.has(venue.track);

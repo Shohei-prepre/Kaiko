@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "primary": "#0055e5",
+          "surface": "#ffffff",
+          "background": "#f2f4f7",
+          "border": "#dee2e6",
+          "text-main": "#0f1115",
+          "text-sub": "#4a5568",
+          "text-muted": "#8a94a6",
+          "sym-great": "#10b981",
+          "sym-good":  "#0055e5",
+          "sym-fair":  "#718096",
+          "sym-bad":   "#f59e0b",
+          "eval-positive-bg": "#ecfdf5",
+          "eval-positive-text": "#065f46",
+          "eval-neutral-bg": "#e8effe",
+          "eval-neutral-text": "#003aaa",
+          "eval-warning-bg": "#fffbeb",
+          "eval-warning-text": "#92400e",
+          "eval-disregard-bg": "#f3f4f6",
+          "eval-disregard-text": "#4b5563",
+          "tag-gold-bg": "#fff4d6",
+          "tag-gold-text": "#7a5000",
+          "tag-red-bg": "#fdeaea",
+          "tag-red-text": "#8c1a1a",
+          "tag-blue-bg": "#e8effe",
+          "tag-blue-text": "#003aaa",
+          "tag-green-bg": "#e6f7ee",
+          "tag-green-text": "#0d5530",
+          "waku-1": "#ffffff",
+          "waku-2": "#e2e8f0",
+          "waku-3": "#fee2e2",
+          "waku-4": "#dbeafe",
+          "waku-5": "#fef9c3",
+          "waku-6": "#dcfce7",
+          "waku-7": "#ffedd5",
+          "waku-8": "#fce7f3"
+        },
+        fontFamily: {
+          "body": ["Noto Sans JP", "sans-serif"],
+          "rajdhani": ["Rajdhani", "sans-serif"]
+        },
+        boxShadow: {
+          'card': '0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1)',
+        }
+      },
+    },
+  }
+</script>
+<style>
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    display: inline-block;
+    line-height: 1;
+  }
+  body { font-family: 'Noto Sans JP', sans-serif; background-color: #f2f4f7; }
+  .rajdhani { font-family: 'Rajdhani', sans-serif; }
+  .logo-font { font-family: 'Noto Sans JP', sans-serif; font-weight: 900; }
+  .row-sep { border-bottom: 1px solid #edf2f7; }
+  .nowrap { white-space: nowrap; }
+  /* eval dot */
+  .eval-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .eval-below  { background: #10b981; }
+  .eval-fair   { background: #0055e5; }
+  .eval-above  { background: #f59e0b; }
+  .eval-disregard { background: #cbd5e0; }
+</style>
+</head>
+<body class="text-text-main select-none pb-32">
+
+<!-- ===== HEADER ===== -->
+<header class="fixed top-0 left-0 w-full z-50 flex items-center px-4 h-14 bg-white border-b border-border shadow-sm">
+  <div class="flex items-center w-full gap-3">
+    <button class="w-8 h-8 rounded-lg border border-border bg-white flex items-center justify-center active:scale-95 duration-150">
+      <span class="material-symbols-outlined text-text-main text-lg font-bold">arrow_back_ios_new</span>
+    </button>
+    <div class="flex items-baseline gap-0.5">
+      <span class="text-xl logo-font tracking-tighter">回顧</span>
+      <span class="text-xl logo-font text-primary italic font-black">AI</span>
+    </div>
+    <div class="flex flex-col leading-tight ml-auto text-right">
+      <span class="text-sm font-bold text-text-main">天皇賞（春）</span>
+      <span class="text-[10px] text-text-muted rajdhani font-bold">2026/4/26 · KYOTO G1</span>
+    </div>
+  </div>
+</header>
+
+<main class="pt-16 px-3 max-w-md mx-auto space-y-3">
+
+  <!-- ===== RACE INFO CARD ===== -->
+  <section class="bg-white rounded-xl shadow-card border border-border overflow-hidden">
+    <div class="h-1 bg-primary w-full"></div>
+    <div class="p-5">
+      <div class="flex items-start justify-between mb-3">
+        <h2 class="text-3xl font-black text-text-main tracking-tight leading-none">天皇賞（春）</h2>
+        <span class="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-blue-50 border border-blue-200 text-primary rajdhani uppercase tracking-wide ml-2 shrink-0">
+          <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse inline-block"></span>
+          出走前
+        </span>
+      </div>
+      <div class="flex flex-wrap gap-2 mb-4">
+        <span class="text-[11px] font-bold px-3 py-1 rounded-full border border-[#e8c060] bg-tag-gold-bg text-tag-gold-text rajdhani uppercase tracking-wider">G1</span>
+        <span class="text-[11px] font-bold px-3 py-1 rounded-full border border-[#80c8a0] bg-tag-green-bg text-tag-green-text rajdhani uppercase tracking-wider">芝</span>
+        <span class="text-[11px] font-bold px-3 py-1 rounded-full border border-border bg-gray-50 text-text-sub rajdhani uppercase tracking-wider">3200m</span>
+        <span class="text-[11px] font-bold px-3 py-1 rounded-full border border-border bg-gray-50 text-text-sub rajdhani uppercase tracking-wider">18頭</span>
+        <span class="text-[11px] font-bold px-3 py-1 rounded-full border border-border bg-amber-50 text-amber-700 rajdhani uppercase tracking-wider">馬場TBD</span>
+      </div>
+      <div class="flex gap-4 text-[13px] text-text-sub font-bold">
+        <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">location_on</span>京都競馬場</span>
+        <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">calendar_today</span>2026年4月26日</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ODDS UPDATE BANNER ===== -->
+  <div class="flex items-center gap-2 bg-white rounded-xl shadow-card border border-border px-4 py-3">
+    <span class="material-symbols-outlined text-primary text-[18px]">sync</span>
+    <div class="flex-1">
+      <span class="text-[11px] font-bold text-text-main">オッズ最終更新</span>
+      <span class="text-[11px] text-text-muted ml-2 rajdhani">2026/4/26 09:45</span>
+    </div>
+    <button class="text-[11px] font-bold text-primary border border-primary/30 bg-eval-neutral-bg px-3 py-1 rounded-full">更新</button>
+  </div>
+
+  <!-- ===== LEGEND ===== -->
+  <div class="flex items-center gap-4 px-1">
+    <span class="rajdhani text-[10px] font-bold text-text-muted uppercase tracking-wider">近3走の評価：</span>
+    <div class="flex items-center gap-1">
+      <span class="eval-dot eval-below"></span>
+      <span class="text-[10px] text-text-sub font-bold">実力以下</span>
+    </div>
+    <div class="flex items-center gap-1">
+      <span class="eval-dot eval-fair"></span>
+      <span class="text-[10px] text-text-sub font-bold">実力通り</span>
+    </div>
+    <div class="flex items-center gap-1">
+      <span class="eval-dot eval-above"></span>
+      <span class="text-[10px] text-text-sub font-bold">実力以上</span>
+    </div>
+    <div class="flex items-center gap-1">
+      <span class="eval-dot eval-disregard"></span>
+      <span class="text-[10px] text-text-sub font-bold">度外視</span>
+    </div>
+  </div>
+
+  <!-- ===== ENTRY LIST ===== -->
+  <section class="bg-white rounded-xl shadow-card border border-border overflow-hidden">
+
+    <!-- Table Header -->
+    <div class="grid grid-cols-[28px_24px_1fr_72px] gap-2 px-3 py-2.5 bg-gray-50 border-b border-border items-center">
+      <span class="rajdhani text-[10px] font-black text-text-muted text-center">枠</span>
+      <span class="rajdhani text-[10px] font-black text-text-muted text-center">馬</span>
+      <span class="rajdhani text-[10px] font-black text-text-muted">馬名 / 騎手</span>
+      <span class="rajdhani text-[10px] font-black text-text-muted text-right">単勝 / 近3走</span>
+    </div>
+
+    <!-- ── Horse 1: 1人気, 近3走: below, fair, below ── -->
+    <div class="grid grid-cols-[28px_24px_1fr_72px] gap-2 px-3 py-3.5 items-center row-sep hover:bg-gray-50 cursor-pointer">
+      <div class="w-6 h-6 rounded-md bg-waku-5 border border-[#e8c060] shadow-sm flex items-center justify-center text-[11px] font-black rajdhani">5</div>
+      <span class="text-[13px] font-black text-text-muted text-center rajdhani italic leading-none">9</span>
+      <div class="min-w-0">
+        <h3 class="font-bold text-[14px] text-text-main leading-tight truncate">ドウデュース</h3>
+        <div class="flex items-center gap-1.5 mt-0.5">
+          <span class="text-[10px] text-text-sub rajdhani font-bold">武豊</span>
+          <span class="text-[10px] text-text-muted rajdhani">58kg</span>
+        </div>
+      </div>
+      <div class="flex flex-col items-end gap-1.5">
+        <div class="flex items-baseline gap-0.5">
+          <span class="text-[18px] font-black text-primary leading-none rajdhani">3.2</span>
+          <span class="text-[10px] font-bold text-primary leading-none">倍</span>
+        </div>
+        <div class="flex items-center gap-0.5">
+          <span class="rajdhani text-[9px] font-black text-white bg-amber-500 px-1 rounded leading-none py-0.5">1人気</span>
+          <!-- 近3走: 1着↓→先走有利(above), 2着●(fair), 1着↑(below) -->
+          <div class="flex gap-0.5 ml-1">
+            <span class="rajdhani text-[10px] font-black text-text-main w-4 h-4 rounded flex items-center justify-center bg-eval-positive-bg border border-emerald-200" style="color:#065f46">1</span>
+            <span class="rajdhani text-[10px] font-black text-text-main w-4 h-4 rounded flex items-center justify-center bg-eval-neutral-bg border border-blue-200" style="color:#003aaa">2</span>
+            <span class="rajdhani text-[10px] font-black text-text-main w-4 h-4 rounded flex items-center justify-center bg-eval-positive-bg border border-emerald-200" style="color:#065f46">1</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Horse 2: 2人気, 近3走: above, fair, fair ── -->
+    <div class="grid grid-cols-[28px_24px_1fr_72px] gap-2 px-3 py-3.5 items-center row-sep hover:bg-gray-50 cursor-pointer">
+      <div class="w-6 h-6 rounded-md bg-waku-7 border border-orange-200 shadow-sm flex items-center justify-center text-[11px] font-black rajdhani">7</div>
+      <span class="text-[13px] font-black text-text-muted text-center rajdhani italic leading-none">13</span>
+      <div class="min-w-0">
+        <h3 class="font-bold text-[14px] text-text-main leading-tight truncate">ディープボンド</h3>
+        <div class="flex items-center gap-1.5 mt-0.5">
+          <span class="text-[10px] text-text-sub rajdhani font-bold">和田竜二</span>
+          <span class="text-[10px] text-text-muted rajdhani">57kg</span>
+        </div>
+      </div>
+      <div class="flex flex-col items-end gap-1.5">
+        <div class="flex items-baseline gap-0.5">
+          <span class="text-[18px] font-black text-primary leading-none rajdhani">5.1</span>
+          <span class="text-[10px] font-bold text-primary leading-none">倍</span>
+        </div>
+        <div class="flex items-center gap-0.5">
+          <span class="rajdhani text-[9px] font-black text-white bg-gray-400 px-1 rounded leading-none py-0.5">2人気</span>
+          <div class="flex gap-0.5 ml-1">
+            <span class="rajdhani text-[10px] font-black w-4 h-4 rounded flex items-center justify-center bg-eval-warning-bg border border-amber-200" style="color:#92400e">2</span>
+            <span class="rajdhani text-[10px] font-black w-4 h-4 rounded flex items-center justify-center bg-eval-neutral-bg border border-blue-200" style="color:#003aaa">3</span>
+            <span class="rajdhani text-[10px] font-black w-4 h-4 rounded flex items-center justify-center bg-eval-neutral-bg border border-blue-200" style="color:#003aaa">2</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Horse 3: 3人気, 近3走: below, below, fair ── BUY HIGHLIGHT -->
+    <div class="grid grid-cols-[28px_24px_1fr_72px] gap-2 px-3 py-3.5 items-center row-sep cursor-pointer bg-emerald-50/40 border-l-2 border-l-emerald-400">
+      <div class="w-6 h-6 rounded-md bg-waku-4 border border-blue-200 shadow-sm flex items-center justify-center text-[11px] font-black rajdhani">4</div>
+      <span class="text-[13px] font-black text-text-muted text-center rajdhani italic leading-none">7</span>
+      <div class="min-w-0">
+        <h3 class="font-bold text-[14px] text-text-main leading-tight truncate">タスティエーラ</h3>
+        <div class="flex items-center gap-1.5 mt-0.5">
+          <span class="text-[10px] text-text-sub rajdhani font-bold">松山弘平</span>
+          <span class="text-[10px] text-text-muted rajdhani">57kg</span>
+        </div>
+        <!-- buy signal badge -->
+        <span class="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-eval-positive-bg border border-emerald-200 text-eval-positive-text mt-1">
+          <span class="material-symbols-outlined text-[10px]" style="font-variation-settings:'FILL' 1">trending_up</span>
+          次走買い候補
+        </span>
+      </div>
+      <div class="flex flex-col items-end gap-1.5">
+        <div class="flex items-baseline gap-0.5">
+          <span class="text-[18px] font-black text-primary leading-none rajdhani">7.8</span>
+          <span class="text-[10px] font-bold text-primary leading-none">倍</span>
+        </div>
+        <div class="flex items-center gap-0.5">
+          <span class="rajdhani text-[9px] font-black text-white bg-gray-400 px-1 rounded leading-none py-0.5">3人気</span>
+          <div class="flex gap-0.5 ml-1">
+            <span class="rajdhani text-[10px] font-black w-4 h-4 rounded flex items-center justify-center bg-eval-positive-bg border border-emerald-200" style="color:#065f46">3</span>
+            <span class="rajdhani text-[10px] font-black w-4 h-4 rounded flex items-center justify-center bg-eval-positive-bg border border-emerald-200" style="color:#065f46">2</span>
+            <span class="rajdhani text-[10px] font-black w-4 h-4 rounded flex items-center justify-center bg-eval-neutral-bg border border-blue-200" style="color:#003aaa">1</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Horse 4: 4人気, 近3走: fair, above, fair ── -->
+    <div class="grid grid-cols-[28px_24px_1fr_72px] gap-2 px-3 py-3.5 items-center row-sep hover:bg-gray-50 cursor-pointer">
+      <div class="w-6 h-6 rounded-md bg-waku-6 border border-emerald-200 shadow-sm flex items-center justify-center text-[11px] font-black rajdhani">6</div>
+      <span class="text-[13px] font-black text-text-muted text-center rajdhani italic leading-none">11</span>
+      <div class="min-w-0">
+        <h3 class="font-bold text-[14px] text-text-main leading-tight truncate">ジャスティンパレス</h3>
+        <div class="flex items-center gap-1.5 mt-0.5">
+          <span class="text-[10px] text-text-sub rajdhani font-bold">C.ルメール</span>
+          <span class="text-[10px] text-text-muted rajdhani">58kg</span>
+        </div>
+      </div>
+      <div class="flex flex-col items-end gap-1.5">
+        <div class="flex items-baseline gap-0.5">
+          <span class="text-[18px] font-black text-primary leading-none rajdhani">9.4</span>
+          <span class="text-[10px] font-bold text-primary leading-none">倍</span>
+        </div>
+        <div class="flex items-center gap-0.5">
+          <span class="rajdhani text-[9px] font-black text-white bg-gray-400 px-1 rounded leading-none py-0.5">4人気</span>
+          <div class="flex gap-0.5 ml-1">
+            <span class="rajdhani text-[10px] font-black w-4 h-4 rounded flex items-center justify-center bg-eval-neutral-bg border border-blue-200" style="color:#003aaa">1</span>
+            <span class="rajdhani text-[10px] font-black w-4 h-4 rounded flex items-center justify-center bg-eval-warning-bg border border-amber-200" style="color:#92400e">2</span>
+            <span class="rajdhani text-[10px] font-black w-4 h-4 rounded flex items-center justify-center bg-eval-neutral-bg border border-blue-200" style="color:#003aaa">4</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Horse 5: 5人気, 近3走: disregard, below, fair ── -->
+    <div class="grid grid-cols-[28px_24px_1fr_72px] gap-2 px-3 py-3.5 items-center row-sep hover:bg-gray-50 cursor-pointer">
+      <div class="w-6 h-6 rounded-md bg-waku-2 border border-gray-300 shadow-sm flex items-center justify-center text-[11px] font-black rajdhani">2</div>
+      <span class="text-[13px] font-black text-text-muted text-center rajdhani italic leading-none">3</span>
+      <div class="min-w-0">
+        <h3 class="font-bold text-[14px] text-text-main leading-tight truncate">シルヴァーソニック</h3>
+        <div class="flex items-center gap-1.5 mt-0.5">
+          <span class="text-[10px] text-text-sub rajdhani font-bold">岩田望来</span>
+          <span class="text-[10px] text-text-muted rajdhani">57kg</span>
+        </div>
+      </div>
+      <div class="flex flex-col items-end gap-1.5">
+        <div class="flex items-baseline gap-0.5">
+          <span class="text-[18px] font-black text-text-sub leading-none rajdhani">12.0</span>
+          <span class="text-[10px] font-bold text-text-sub leading-none">倍</span>
+        </div>
+        <div class="flex items-center gap-0.5">
+          <span class="rajdhani text-[9px] font-black text-white bg-gray-300 px-1 rounded leading-none py-0.5">5人気</span>
+          <div class="flex gap-0.5 ml-1">
+            <span class="rajdhani text-[10px] font-black w-4 h-4 rounded flex items-center justify-center bg-eval-disregard-bg border border-gray-200 text-gray-400">-</span>
+            <span class="rajdhani text-[10px] font-black w-4 h-4 rounded flex items-center justify-center bg-eval-positive-bg border border-emerald-200" style="color:#065f46">4</span>
+            <span class="rajdhani text-[10px] font-black w-4 h-4 rounded flex items-center justify-center bg-eval-neutral-bg border border-blue-200" style="color:#003aaa">3</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Horse 6: 6人気 ── -->
+    <div class="grid grid-cols-[28px_24px_1fr_72px] gap-2 px-3 py-3.5 items-center row-sep hover:bg-gray-50 cursor-pointer">
+      <div class="w-6 h-6 rounded-md bg-waku-3 border border-red-200 shadow-sm flex items-center justify-center text-[11px] font-black rajdhani">3</div>
+      <span class="text-[13px] font-black text-text-muted text-center rajdhani italic leading-none">5</span>
+      <div class="min-w-0">
+        <h3 class="font-bold text-[14px] text-text-main leading-tight truncate">アイアンバローズ</h3>
+        <div class="flex items-center gap-1.5 mt-0.5">
+          <span class="text-[10px] text-text-sub rajdhani font-bold">浜中俊</span>
+          <span class="text-[10px] text-text-muted rajdhani">57kg</span>
+        </div>
+      </div>
+      <div class="flex flex-col items-end gap-1.5">
+        <div class="flex items-baseline gap-0.5">
+          <span class="text-[18px] font-black text-text-sub leading-none rajdhani">18.5</span>
+          <span class="text-[10px] font-bold text-text-sub leading-none">倍</span>
+        </div>
+        <div class="flex items-center gap-0.5">
+          <span class="rajdhani text-[9px] font-black text-white bg-gray-300 px-1 rounded leading-none py-0.5">6人気</span>
+          <div class="flex gap-0.5 ml-1">
+            <span class="rajdhani text-[10px] font-black w-4 h-4 rounded flex items-center justify-center bg-eval-neutral-bg border border-blue-200" style="color:#003aaa">2</span>
+            <span class="rajdhani text-[10px] font-black w-4 h-4 rounded flex items-center justify-center bg-eval-warning-bg border border-amber-200" style="color:#92400e">1</span>
+            <span class="rajdhani text-[10px] font-black w-4 h-4 rounded flex items-center justify-center bg-eval-positive-bg border border-emerald-200" style="color:#065f46">3</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Horse 7 ── -->
+    <div class="grid grid-cols-[28px_24px_1fr_72px] gap-2 px-3 py-3.5 items-center row-sep hover:bg-gray-50 cursor-pointer">
+      <div class="w-6 h-6 rounded-md bg-waku-8 border border-pink-200 shadow-sm flex items-center justify-center text-[11px] font-black rajdhani">8</div>
+      <span class="text-[13px] font-black text-text-muted text-center rajdhani italic leading-none">15</span>
+      <div class="min-w-0">
+        <h3 class="font-bold text-[14px] text-text-main leading-tight truncate">ボルドグフーシュ</h3>
+        <div class="flex items-center gap-1.5 mt-0.5">
+          <span class="text-[10px] text-text-sub rajdhani font-bold">坂井瑠星</span>
+          <span class="text-[10px] text-text-muted rajdhani">57kg</span>
+        </div>
+      </div>
+      <div class="flex flex-col items-end gap-1.5">
+        <div class="flex items-baseline gap-0.5">
+          <span class="text-[18px] font-black text-text-sub leading-none rajdhani">24.0</span>
+          <span class="text-[10px] font-bold text-text-sub leading-none">倍</span>
+        </div>
+        <div class="flex items-center gap-0.5">
+          <span class="rajdhani text-[9px] font-black text-white bg-gray-300 px-1 rounded leading-none py-0.5">7人気</span>
+          <div class="flex gap-0.5 ml-1">
+            <span class="rajdhani text-[10px] font-black w-4 h-4 rounded flex items-center justify-center bg-eval-positive-bg border border-emerald-200" style="color:#065f46">5</span>
+            <span class="rajdhani text-[10px] font-black w-4 h-4 rounded flex items-center justify-center bg-eval-neutral-bg border border-blue-200" style="color:#003aaa">3</span>
+            <span class="rajdhani text-[10px] font-black w-4 h-4 rounded flex items-center justify-center bg-eval-disregard-bg border border-gray-200 text-gray-400">-</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Horse 8 ── -->
+    <div class="grid grid-cols-[28px_24px_1fr_72px] gap-2 px-3 py-3.5 items-center row-sep hover:bg-gray-50 cursor-pointer">
+      <div class="w-6 h-6 rounded-md bg-waku-1 border border-gray-200 shadow-sm flex items-center justify-center text-[11px] font-black rajdhani">1</div>
+      <span class="text-[13px] font-black text-text-muted text-center rajdhani italic leading-none">1</span>
+      <div class="min-w-0">
+        <h3 class="font-bold text-[14px] text-text-main leading-tight truncate">ヒートオンビート</h3>
+        <div class="flex items-center gap-1.5 mt-0.5">
+          <span class="text-[10px] text-text-sub rajdhani font-bold">横山武史</span>
+          <span class="text-[10px] text-text-muted rajdhani">57kg</span>
+        </div>
+      </div>
+      <div class="flex flex-col items-end gap-1.5">
+        <div class="flex items-baseline gap-0.5">
+          <span class="text-[18px] font-black text-text-sub leading-none rajdhani">35.2</span>
+          <span class="text-[10px] font-bold text-text-sub leading-none">倍</span>
+        </div>
+        <div class="flex items-center gap-0.5">
+          <span class="rajdhani text-[9px] font-black text-white bg-gray-300 px-1 rounded leading-none py-0.5">8人気</span>
+          <div class="flex gap-0.5 ml-1">
+            <span class="rajdhani text-[10px] font-black w-4 h-4 rounded flex items-center justify-center bg-eval-neutral-bg border border-blue-200" style="color:#003aaa">4</span>
+            <span class="rajdhani text-[10px] font-black w-4 h-4 rounded flex items-center justify-center bg-eval-neutral-bg border border-blue-200" style="color:#003aaa">5</span>
+            <span class="rajdhani text-[10px] font-black w-4 h-4 rounded flex items-center justify-center bg-eval-warning-bg border border-amber-200" style="color:#92400e">3</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- more rows faded -->
+    <div class="px-4 py-3 text-center text-[11px] text-text-muted font-bold border-t border-border bg-gray-50">
+      ＋10頭を表示
+    </div>
+
+  </section>
+
+  <!-- ===== BUY SIGNAL SUMMARY ===== -->
+  <section class="bg-white rounded-xl shadow-card border border-emerald-200 overflow-hidden">
+    <div class="h-1 bg-sym-great w-full"></div>
+    <div class="p-4">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="material-symbols-outlined text-sym-great text-[18px]" style="font-variation-settings:'FILL' 1">trending_up</span>
+        <span class="text-[12px] font-black text-text-main uppercase tracking-wider">次走買い候補</span>
+        <span class="text-[10px] font-bold text-text-muted ml-auto">近2走以上 実力以下</span>
+      </div>
+      <div class="space-y-2">
+        <!-- candidate 1 -->
+        <div class="flex items-center gap-3 bg-eval-positive-bg border border-emerald-200 rounded-lg px-3 py-2.5">
+          <div class="w-5 h-5 rounded bg-waku-4 border border-blue-200 flex items-center justify-center text-[10px] font-black rajdhani shrink-0">4</div>
+          <div class="flex-1 min-w-0">
+            <span class="text-[13px] font-bold text-text-main">タスティエーラ</span>
+            <span class="text-[10px] text-text-sub ml-2">近2走: 実力以下</span>
+          </div>
+          <div class="text-right shrink-0">
+            <span class="text-[16px] font-black text-primary rajdhani">7.8</span>
+            <span class="text-[10px] text-primary font-bold">倍</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===== BOTTOM NAV ===== -->
+<nav class="fixed bottom-0 left-0 w-full bg-white border-t border-border z-50">
+  <div class="max-w-md mx-auto flex">
+    <a class="flex-1 flex flex-col items-center justify-center h-16 gap-0.5 text-text-muted" href="#">
+      <span class="material-symbols-outlined text-[22px]">history</span>
+      <span class="text-[10px] font-bold">レース</span>
+    </a>
+    <a class="flex-1 flex flex-col items-center justify-center h-16 gap-0.5 text-primary border-t-2 border-primary" href="#">
+      <span class="material-symbols-outlined text-[22px]" style="font-variation-settings:'FILL' 1">event_upcoming</span>
+      <span class="text-[10px] font-bold">出走前</span>
+    </a>
+    <a class="flex-1 flex flex-col items-center justify-center h-16 gap-0.5 text-text-muted" href="#">
+      <span class="material-symbols-outlined text-[22px]">compare_arrows</span>
+      <span class="text-[10px] font-bold">能力比較</span>
+    </a>
+  </div>
+</nav>
+
+</body>
+</html>
