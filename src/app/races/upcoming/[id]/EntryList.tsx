@@ -87,6 +87,9 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
           const isExpanded = expandedId === entry.id;
           const pickStyle = pick ? PICK_STYLE[pick.symbol] : null;
 
+          // pick がなくても逆張り詳細があればタップ可能にする
+          const isExpandable = !!(pick || vbDetail);
+
           return (
             <div
               key={entry.id}
@@ -98,10 +101,10 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
               {/* メイン行 */}
               <button
                 className="w-full text-left"
-                onClick={() => pick ? setExpandedId(isExpanded ? null : entry.id) : undefined}
+                onClick={() => isExpandable ? setExpandedId(isExpanded ? null : entry.id) : undefined}
               >
                 <div
-                  className={`grid gap-2 px-3 py-3.5 items-center ${pick ? "cursor-pointer active:bg-gray-50" : ""}`}
+                  className={`grid gap-2 px-3 py-3.5 items-center ${isExpandable ? "cursor-pointer active:bg-gray-50" : ""}`}
                   style={{ gridTemplateColumns: "20px 28px 24px 1fr 72px" }}
                 >
                   {/* 印 */}
@@ -211,7 +214,7 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
                         }
                       </div>
                     </div>
-                    {pick && (
+                    {isExpandable && (
                       <span className="text-[8px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)]">
                         {isExpanded ? "▲ 閉じる" : "▼ 詳細"}
                       </span>
@@ -220,50 +223,64 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
                 </div>
               </button>
 
-              {/* 展開パネル: 印の詳細 */}
-              {isExpanded && pick && pickStyle && (
-                <div className={`mx-3 mb-3 rounded-xl border ${pickStyle.color} p-3 space-y-2.5`}>
-                  {/* 印の種類ヘッダー */}
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[22px] font-black leading-none ${pickStyle.text} ${pickStyle.weight}`}>
-                      {pick.symbol}
-                    </span>
-                    <div>
-                      <span className={`text-[12px] font-black ${pickStyle.text}`}>{pickStyle.label}</span>
-                      <p className="text-[10px] text-[var(--kaiko-text-muted)]">{pickStyle.desc}</p>
-                    </div>
-                    <div className="ml-auto text-right">
-                      <span className="text-[10px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] block">EV（回収率目安）</span>
-                      <span className={`text-[18px] font-black font-[family-name:var(--font-rajdhani)] leading-none ${
-                        pick.ev >= 1.0 ? "text-emerald-600" : "text-[var(--kaiko-text-sub)]"
-                      }`}>
-                        {pick.ev.toFixed(2)}
-                      </span>
-                      <span className="text-[9px] text-[var(--kaiko-text-muted)] block">{pick.ev >= 1.0 ? "▲ 理論プラス" : "▼ 理論マイナス"}</span>
-                    </div>
-                  </div>
+              {/* 展開パネル: 印の詳細 or 逆張り詳細のみ */}
+              {isExpanded && (pick || vbDetail) && (
+                <div className={`mx-3 mb-3 rounded-xl border ${pickStyle ? pickStyle.color : "bg-amber-50 border-amber-200"} p-3 space-y-2.5`}>
 
-                  {/* 推定勝率 */}
-                  <div className="bg-white/70 rounded-lg p-2.5">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div>
-                        <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase font-[family-name:var(--font-rajdhani)] tracking-wider">推定勝率</span>
-                        <span className="text-[9px] text-[var(--kaiko-text-muted)] block">補正スコアベース・全頭補正済</span>
+                  {/* 印あり: ヘッダー + EV + 推定勝率 */}
+                  {pick && pickStyle && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[22px] font-black leading-none ${pickStyle.text} ${pickStyle.weight}`}>
+                          {pick.symbol}
+                        </span>
+                        <div>
+                          <span className={`text-[12px] font-black ${pickStyle.text}`}>{pickStyle.label}</span>
+                          <p className="text-[10px] text-[var(--kaiko-text-muted)]">{pickStyle.desc}</p>
+                        </div>
+                        <div className="ml-auto text-right">
+                          <span className="text-[10px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] block">EV（回収率目安）</span>
+                          <span className={`text-[18px] font-black font-[family-name:var(--font-rajdhani)] leading-none ${
+                            pick.ev >= 1.0 ? "text-emerald-600" : "text-[var(--kaiko-text-sub)]"
+                          }`}>
+                            {pick.ev.toFixed(2)}
+                          </span>
+                          <span className="text-[9px] text-[var(--kaiko-text-muted)] block">{pick.ev >= 1.0 ? "▲ 理論プラス" : "▼ 理論マイナス"}</span>
+                        </div>
                       </div>
-                      <span className="text-[14px] font-black text-[var(--kaiko-text-main)] font-[family-name:var(--font-rajdhani)]">
-                        {pick.winProb.toFixed(1)}%
-                      </span>
+                      <div className="bg-white/70 rounded-lg p-2.5">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div>
+                            <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase font-[family-name:var(--font-rajdhani)] tracking-wider">推定勝率</span>
+                            <span className="text-[9px] text-[var(--kaiko-text-muted)] block">補正スコアベース・全頭補正済</span>
+                          </div>
+                          <span className="text-[14px] font-black text-[var(--kaiko-text-main)] font-[family-name:var(--font-rajdhani)]">
+                            {pick.winProb.toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-[var(--kaiko-primary)] rounded-full transition-all"
+                            style={{ width: `${Math.min(pick.winProb, 100)}%` }}
+                          />
+                        </div>
+                        <p className="text-[9px] text-[var(--kaiko-text-muted)] mt-1 leading-snug">
+                          ※データあり馬全体を全頭数で補正した理論確率。
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  {/* 印なし・逆張りのみの場合のヘッダー */}
+                  {!pick && vbDetail && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[22px] font-black leading-none text-amber-500">★</span>
+                      <div>
+                        <span className="text-[12px] font-black text-amber-700">逆張り買い候補</span>
+                        <p className="text-[10px] text-[var(--kaiko-text-muted)]">能力の割に人気がない馬（EV計算データ不足）</p>
+                      </div>
                     </div>
-                    <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-[var(--kaiko-primary)] rounded-full transition-all"
-                        style={{ width: `${Math.min(pick.winProb, 100)}%` }}
-                      />
-                    </div>
-                    <p className="text-[9px] text-[var(--kaiko-text-muted)] mt-1 leading-snug">
-                      ※データあり馬全体を全頭数で補正した理論確率。実際のオッズとの差が期待値の根拠。
-                    </p>
-                  </div>
+                  )}
 
                   {/* 逆張り詳細（isValueBetの場合） */}
                   {vbDetail && (
