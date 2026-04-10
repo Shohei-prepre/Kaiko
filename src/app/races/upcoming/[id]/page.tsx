@@ -32,13 +32,15 @@ async function getUpcomingRace(id: string): Promise<UpcomingRace | null> {
   }
 }
 
-async function getEntries(raceId: string): Promise<UpcomingEntry[]> {
+async function getEntries(raceId: string, headCount: number | null): Promise<UpcomingEntry[]> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from("upcoming_entries" as never)
       .select("*")
-      .eq("race_id", raceId)
-      .order("popularity");
+      .eq("race_id", raceId);
+    // 補欠馬（horse_number > head_count）を除外
+    if (headCount) query = (query as any).lte("horse_number", headCount);
+    const { data, error } = await (query as any).order("popularity");
     if (error || !data) return [];
     return data as UpcomingEntry[];
   } catch {
@@ -212,12 +214,9 @@ function EvalMiniBadge({ perf }: { perf: RecentPerf }) {
 export default async function UpcomingRaceDetailPage({ params }: Props) {
   const { id } = await params;
 
-  const [race, entries] = await Promise.all([
-    getUpcomingRace(id),
-    getEntries(id),
-  ]);
-
+  const race = await getUpcomingRace(id);
   if (!race) notFound();
+  const entries = await getEntries(id, race.head_count);
 
   // horse_id が NULL の馬を名前で解決
   const unlinkedNames = entries
