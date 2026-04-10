@@ -22,9 +22,13 @@ async function getRace(id: string): Promise<RaceWithPerformances | null> {
     .eq("race_id", id)
     .single();
 
-  if (error || !data) return null;
+  if (error || !data) {
+    console.error("[getRace] query error:", error, "id:", id);
+    return null;
+  }
 
   const race = data as RaceWithPerformances;
+  race.horse_performances = race.horse_performances ?? [];
   race.horse_performances.sort((a, b) => a.finish_order - b.finish_order);
   return race;
 }
@@ -75,7 +79,12 @@ export default async function RaceDetailPage({ params }: Props) {
 
   if (!race) notFound();
 
-  const lapTimes = race.lap_times ?? [];
+  const lapTimesRaw = race.lap_times ?? [];
+  const lapTimes: number[] = Array.isArray(lapTimesRaw)
+    ? lapTimesRaw
+    : typeof lapTimesRaw === "string"
+      ? (() => { try { return JSON.parse(lapTimesRaw); } catch { return []; } })()
+      : [];
   const midIndex = Math.floor(lapTimes.length / 2);
 
   const firstHalf = lapTimes.slice(0, midIndex).reduce((s, v) => s + v, 0).toFixed(1);
