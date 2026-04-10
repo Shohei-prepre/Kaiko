@@ -161,40 +161,61 @@ function calcCorrectedScore(perf: RecentPerf): number {
   return perf.finish_order - ability;
 }
 
+export interface ValueBetDetail {
+  /** 能力推定ランク（1=最強）: 補正スコア平均の昇順 */
+  abilityRank: number;
+  /** 人気順（1=最人気） */
+  oddsRank: number;
+  /** 補正スコア平均（小さいほど強い）: finish_order - ability_value の平均 */
+  avgScore: number;
+  /** 分析に使った非度外視走数 */
+  racesAnalyzed: number;
+}
+
 /**
- * 出走前レースの「買い」逆張りフラグ。
- * 各馬の直近5走（disregard除外）の補正スコア平均でランク付けし、
- * 能力ランク < オッズランク（能力の割に人気がない）の馬にフラグを立てる。
+ * 出走前レースの「逆張り買い」詳細。
+ * 各馬の直近5走（disregard除外、最低2走必要）の補正スコア平均でランク付けし、
+ * 能力ランク < 人気ランク（能力の割に人気がない）の馬を返す。
  *
- * 返り値: 買いフラグが立つ horse_id の Set
+ * 返り値: horse_id → ValueBetDetail の Map（フラグ立ちの馬のみ）
  */
-export function calcValueBetFlags(
+export function calcValueBetDetails(
   entries: UpcomingEntryWithForm[]
-): Set<number> {
-  // 過去データがある馬だけ対象
-  type Scored = { horse_id: number; abilityRank: number; oddsRank: number };
-  const scored: Scored[] = [];
+): Map<number, ValueBetDetail> {
+  const result = new Map<number, ValueBetDetail>();
 
   const withScore = entries
-    .filter((e) => e.horse_id !== null && e.recentPerfs.length > 0 && e.odds !== null)
+    .filter((e) => e.horse_id !== null && e.odds !== null && e.popularity !== null)
     .map((e) => {
       const valid = e.recentPerfs.filter((p) => p.eval_tag !== "disregard");
-      if (valid.length === 0) return null;
+      // 最低2走の非度外視データが必要（1走だけでは信頼性が低い）
+      if (valid.length < 2) return null;
       const avg = valid.reduce((sum, p) => sum + calcCorrectedScore(p), 0) / valid.length;
-      return { horse_id: e.horse_id!, avg, oddsRank: e.popularity ?? 99 };
+      return { horse_id: e.horse_id!, avg, oddsRank: e.popularity!, racesAnalyzed: valid.length };
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
 
-  // 能力ランク: avg 昇順（小さいほど強い）
+  // 能力ランク: avg 昇順（小さいほど強い → ランク1が最強）
   const sorted = [...withScore].sort((a, b) => a.avg - b.avg);
   sorted.forEach((x, i) => {
-    scored.push({ horse_id: x.horse_id, abilityRank: i + 1, oddsRank: x.oddsRank });
+    const abilityRank = i + 1;
+    // 能力ランク < 人気ランク = 「能力の割に人気がない」＝ 逆張り買い
+    if (abilityRank < x.oddsRank) {
+      result.set(x.horse_id, {
+        abilityRank,
+        oddsRank: x.oddsRank,
+        avgScore: Math.round(x.avg * 10) / 10,
+        racesAnalyzed: x.racesAnalyzed,
+      });
+    }
   });
 
-  // 能力ランク < オッズランク → 買い
-  return new Set(
-    scored.filter((x) => x.abilityRank < x.oddsRank).map((x) => x.horse_id)
-  );
+  return result;
+}
+
+/** @deprecated calcValueBetDetails を使ってください */
+export function calcValueBetFlags(entries: UpcomingEntryWithForm[]): Set<number> {
+  return new Set(calcValueBetDetails(entries).keys());
 }
 
 export type Database = {

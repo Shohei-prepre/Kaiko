@@ -8,7 +8,8 @@ import type {
   RecentPerf,
   EvalTag,
 } from "@/lib/database.types";
-import { isBuyCandidate, calcValueBetFlags } from "@/lib/database.types";
+import { isBuyCandidate, calcValueBetDetails } from "@/lib/database.types";
+import type { ValueBetDetail } from "@/lib/database.types";
 import BottomNav from "@/components/BottomNav";
 
 interface Props {
@@ -99,7 +100,7 @@ async function getRecentPerfsForHorses(
       races: { race_name: string; race_date: string } | null;
     };
 
-    // horse_id ごとに race_date 降順でソートして上位3件取得
+    // horse_id ごとに race_date 降順でソートして上位5件取得
     const byHorse = new Map<number, RawPerf[]>();
     for (const row of data as RawPerf[]) {
       if (!row.races) continue;
@@ -110,7 +111,7 @@ async function getRecentPerfsForHorses(
     for (const [hid, perfs] of byHorse.entries()) {
       const sorted = perfs
         .sort((a, b) => b.races!.race_date.localeCompare(a.races!.race_date))
-        .slice(0, 3)
+        .slice(0, 5)
         .map((p) => ({
           race_name: p.races!.race_name,
           race_date: p.races!.race_date,
@@ -233,7 +234,7 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
   }));
 
   const buyCandidates = entriesWithForm.filter((e) => isBuyCandidate(e.recentPerfs));
-  const valueBetIds = calcValueBetFlags(entriesWithForm);
+  const valueBetMap = calcValueBetDetails(entriesWithForm);
 
   const gradeBadge = GRADE_BADGE[race.grade] ?? GRADE_BADGE["OP"];
   const surfaceBadge = SURFACE_BADGE[race.surface] ?? SURFACE_BADGE["芝"];
@@ -354,7 +355,8 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
           ) : (
             entriesWithForm.map((entry) => {
               const isCandidate = isBuyCandidate(entry.recentPerfs);
-              const isValueBet = entry.horse_id !== null && valueBetIds.has(entry.horse_id);
+              const vbDetail: ValueBetDetail | undefined = entry.horse_id ? valueBetMap.get(entry.horse_id) : undefined;
+              const isValueBet = vbDetail !== undefined;
               const waku = entry.frame_number ?? 1;
               const wakuStyle = WAKU_STYLES[Math.min(waku, 8)] ?? WAKU_STYLES[1];
               const horseHref = entry.horse_id ? `/horses/${entry.horse_id}` : undefined;
@@ -407,11 +409,30 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
                         )}
                       </div>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {isValueBet && (
-                          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-300 text-amber-700">
-                            <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                            逆張り買い
-                          </span>
+                        {isValueBet && vbDetail && (
+                          <details className="w-full">
+                            <summary className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-300 text-amber-700 cursor-pointer list-none select-none">
+                              <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                              逆張り買い
+                              <span className="material-symbols-outlined text-[9px] ml-0.5">expand_more</span>
+                            </summary>
+                            <div className="mt-1.5 text-[10px] bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2 space-y-1">
+                              <p className="text-amber-800 font-bold text-[9px] mb-1.5">能力の割に人気がない馬</p>
+                              <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                                <div className="text-amber-700">能力推定ランク</div>
+                                <div className="font-black text-amber-900">{vbDetail.abilityRank}位</div>
+                                <div className="text-amber-700">現在人気</div>
+                                <div className="font-black text-amber-900">{vbDetail.oddsRank}番人気</div>
+                                <div className="text-amber-700">補正スコア平均</div>
+                                <div className="font-black text-amber-900">{vbDetail.avgScore}</div>
+                                <div className="text-amber-700">分析走数</div>
+                                <div className="font-black text-amber-900">{vbDetail.racesAnalyzed}走</div>
+                              </div>
+                              <p className="text-[9px] text-amber-600 mt-1.5 leading-snug">
+                                補正スコア＝着順−能力補正値。小さいほど強い。
+                              </p>
+                            </div>
+                          </details>
                         )}
                         {isCandidate && (
                           <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--kaiko-eval-positive-bg)] border border-emerald-200 text-[var(--kaiko-eval-positive-text)]">
