@@ -192,7 +192,7 @@ async function findBenchmarkCandidates(
   return results.sort((a, b) => Math.abs(a.estimatedDiff) - Math.abs(b.estimatedDiff));
 }
 
-async function fetchHorseOption(id: number): Promise<HorseOption | null> {
+async function fetchHorseOption(id: number, fromRaceId?: string): Promise<HorseOption | null> {
   const supabase = getSupabase();
   const { data: horse } = await supabase
     .from("horses")
@@ -207,7 +207,22 @@ async function fetchHorseOption(id: number): Promise<HorseOption | null> {
     .neq("eval_tag", "disregard")
     .order("race_id", { ascending: false })
     .limit(5);
-  return { horse: horse as Horse, perfs: ((perfs ?? []) as PerfWithRace[]) };
+
+  // raceId の解決:
+  // 1. 呼び出し元からレースを指定された場合はそれを使う
+  // 2. それ以外は upcoming_entries から horse_id で出走予定レースを検索
+  let raceId: string | undefined = fromRaceId;
+  if (!raceId) {
+    const { data: entry } = await supabase
+      .from("upcoming_entries")
+      .select("race_id")
+      .eq("horse_id", id)
+      .limit(1)
+      .single();
+    raceId = (entry as { race_id: string } | null)?.race_id ?? undefined;
+  }
+
+  return { horse: horse as Horse, perfs: ((perfs ?? []) as PerfWithRace[]), raceId };
 }
 
 // 補正値の色クラス
@@ -790,12 +805,11 @@ export default function CompareClient() {
   }, [searchParams]);
 
   const handleSelectHorse = useCallback(async (id: number, fromRaceId?: string) => {
-    const opt = await fetchHorseOption(id);
+    // fromRaceId がある場合はそれを優先、なければ fetchHorseOption 内で upcoming_entries から自動解決
+    const opt = await fetchHorseOption(id, fromRaceId);
     if (!opt) return;
-    // 選んだレースのIDを付与（馬B選択時に「同じレースから」タブで使う）
-    const optWithRace: HorseOption = fromRaceId ? { ...opt, raceId: fromRaceId } : opt;
-    if (modal === "A") setHorseA(optWithRace);
-    else setHorseB(optWithRace);
+    if (modal === "A") setHorseA(opt);
+    else setHorseB(opt);
   }, [modal]);
 
   // 直接対決
