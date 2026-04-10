@@ -578,12 +578,24 @@ export default function CompareClient() {
   const tabRaces = directResult?.races ?? [];
   const tabRace = activeTab > 0 ? tabRaces[activeTab - 1] : null;
 
-  const avgCorr: Record<string, number> = {};
+  // 補正詳細の集計（A・B両方 + 生着差 + バイアス）
+  const avgCorrA: Record<string, number> = {};
+  const avgCorrB: Record<string, number> = {};
+  let avgRawDiff = 0;
+  let avgBias = 0;
   if (directResult && directResult.races.length > 0) {
     for (const item of CORRECTION_ITEMS) {
-      const vals = directResult.races.map(({ perfA }) => perfA[item.key] as number ?? 0);
-      avgCorr[item.key as string] = vals.reduce((s, v) => s + v, 0) / vals.length;
+      const valsA = directResult.races.map(({ perfA }) => (perfA[item.key] as number) ?? 0);
+      const valsB = directResult.races.map(({ perfB }) => (perfB[item.key] as number) ?? 0);
+      avgCorrA[item.key as string] = valsA.reduce((s, v) => s + v, 0) / valsA.length;
+      avgCorrB[item.key as string] = valsB.reduce((s, v) => s + v, 0) / valsB.length;
     }
+    const rawDiffs = directResult.races.map(({ perfA, perfB }) =>
+      (perfB.finish_order - perfA.finish_order) * 0.5
+    );
+    avgRawDiff = rawDiffs.reduce((s, v) => s + v, 0) / rawDiffs.length;
+    const biases = directResult.races.map(({ perfA }) => perfA.races.track_bias_value ?? 0);
+    avgBias = biases.reduce((s, v) => s + v, 0) / biases.length;
   }
 
   const tabs = ["統合評価", ...(tabRaces.map((_, i) => `レース${i + 1}`))];
@@ -793,35 +805,70 @@ export default function CompareClient() {
                 </h3>
               </div>
               <div className="divide-y divide-[var(--kaiko-outline-variant)]/30">
-                <div className="flex items-center justify-between p-4">
-                  <span className="text-sm font-medium text-[var(--kaiko-on-surface-variant)]">
+
+                {/* ベース着差 */}
+                <div className="flex items-center justify-between px-4 py-3">
+                  <span className="text-[11px] font-medium text-[var(--kaiko-on-surface-variant)]">
                     実際の着差（ベース）
                   </span>
                   <span className="font-[family-name:var(--font-bebas-neue)] text-2xl text-[var(--kaiko-on-surface)]">
                     {tabRace
                       ? formatVal((tabRace.perfB.finish_order - tabRace.perfA.finish_order) * 0.5)
-                      : formatVal(directDiff ?? 0)}
+                      : formatVal(avgRawDiff)}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 bg-gray-50/30 gap-px">
+                {/* 補正項目テーブル（A・B並列） */}
+                <div>
+                  {/* ヘッダー */}
+                  <div className="grid grid-cols-3 px-4 py-1.5 bg-gray-50 border-b border-[var(--kaiko-outline-variant)]/30">
+                    <span className="text-[9px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider">補正項目</span>
+                    <span className="text-[9px] font-black text-[var(--kaiko-primary)] uppercase tracking-wider text-center">
+                      {horseA?.horse.name ?? "馬A"}
+                    </span>
+                    <span className="text-[9px] font-black text-[var(--kaiko-on-surface-variant)] uppercase tracking-wider text-center">
+                      {horseB?.horse.name ?? "馬B"}
+                    </span>
+                  </div>
                   {CORRECTION_ITEMS.map((item) => {
-                    const val = tabRace
-                      ? (tabRace.perfA[item.key] as number ?? 0)
-                      : (avgCorr[item.key as string] ?? 0);
+                    const valA = tabRace
+                      ? ((tabRace.perfA[item.key] as number) ?? 0)
+                      : (avgCorrA[item.key as string] ?? 0);
+                    const valB = tabRace
+                      ? ((tabRace.perfB[item.key] as number) ?? 0)
+                      : (avgCorrB[item.key as string] ?? 0);
                     return (
-                      <div key={item.key as string} className="bg-white p-4">
-                        <span className="text-[10px] font-bold text-[var(--kaiko-on-surface-variant)] block mb-1">
+                      <div key={item.key as string} className="grid grid-cols-3 px-4 py-2.5 border-b border-[var(--kaiko-outline-variant)]/20 last:border-b-0">
+                        <span className="text-[10px] font-bold text-[var(--kaiko-on-surface-variant)] self-center">
                           {item.label}
                         </span>
-                        <span className={`font-[family-name:var(--font-bebas-neue)] text-xl ${corrClass(val)}`}>
-                          {formatVal(val)}
+                        <span className={`font-[family-name:var(--font-bebas-neue)] text-lg text-center ${corrClass(valA)}`}>
+                          {formatVal(valA)}
+                        </span>
+                        <span className={`font-[family-name:var(--font-bebas-neue)] text-lg text-center ${corrClass(valB)}`}>
+                          {formatVal(valB)}
                         </span>
                       </div>
                     );
                   })}
+                  {/* コースバイアス（レース全体） */}
+                  {(() => {
+                    const bias = tabRace
+                      ? (tabRace.perfA.races.track_bias_value ?? 0)
+                      : avgBias;
+                    return (
+                      <div className="grid grid-cols-3 px-4 py-2.5 bg-gray-50/60">
+                        <span className="text-[10px] font-bold text-[var(--kaiko-on-surface-variant)] self-center">コースバイアス</span>
+                        <span className={`font-[family-name:var(--font-bebas-neue)] text-lg text-center ${corrClass(bias)}`}>
+                          {formatVal(bias)}
+                        </span>
+                        <span className="text-[11px] text-center text-[var(--kaiko-text-muted)] self-center">（共通）</span>
+                      </div>
+                    );
+                  })()}
                 </div>
 
+                {/* 補正後の能力差 */}
                 <div className="flex items-center justify-between p-5 bg-[var(--kaiko-primary)]/5">
                   <span className="font-bold text-[var(--kaiko-primary)] text-sm">補正後の能力差</span>
                   <div className="text-right">
