@@ -42,6 +42,7 @@ interface PerfWithRaceAndHorse extends HorsePerformance {
 interface HorseOption {
   horse: Horse;
   perfs: PerfWithRace[];
+  raceId?: string; // この馬をどのレースから選んだか（馬B選択時の同レースフィルタ用）
 }
 
 // 物差し馬候補（perfsを保持してクライアントサイドで再計算可能にする）
@@ -273,11 +274,20 @@ function getWeekKey(dateStr: string): string {
 function HorseSelectModal({
   onSelect,
   onClose,
+  horseA,
 }: {
-  onSelect: (id: number) => void;
+  onSelect: (id: number, fromRaceId?: string) => void;
   onClose: () => void;
+  horseA?: HorseOption; // 馬B選択時のみ渡す（同レースフィルタ用）
 }) {
-  const [tab, setTab] = useState<"race" | "name">("race");
+  // horseA が渡されている場合は「同じレースから」タブをデフォルトに
+  const [tab, setTab] = useState<"same" | "race" | "name">(horseA?.raceId ? "same" : "race");
+
+  // 「同じレースから」タブ用
+  const [sameRaceHorses, setSameRaceHorses] = useState<
+    { horseId: number; horseName: string; horseNumber: number | null; jockey: string | null; popularity: number | null }[]
+  >([]);
+  const [sameRaceLoading, setSameRaceLoading] = useState(false);
 
   const [races, setRaces] = useState<Race[]>([]);
   // 絞り込みステップ: null=年月選択, "YYYY-MM"=週選択, "YYYY-MM-DD"=レース選択, race=馬選択
@@ -296,6 +306,39 @@ function HorseSelectModal({
       .order("race_date", { ascending: false })
       .then(({ data }) => setRaces((data ?? []) as Race[]));
   }, []);
+
+  // 「同じレースから」タブ: horseA.raceId があれば upcoming_entries から同レース馬を取得
+  useEffect(() => {
+    if (!horseA?.raceId) return;
+    setSameRaceLoading(true);
+    const supabase = getSupabase();
+    supabase
+      .from("upcoming_entries")
+      .select("horse_id, horse_name, horse_number, jockey, popularity")
+      .eq("race_id", horseA.raceId)
+      .order("horse_number", { ascending: true })
+      .then(({ data }) => {
+        const rows = (data ?? []) as {
+          horse_id: number | null;
+          horse_name: string;
+          horse_number: number | null;
+          jockey: string | null;
+          popularity: number | null;
+        }[];
+        setSameRaceHorses(
+          rows
+            .filter((r) => r.horse_id !== null && r.horse_id !== horseA.horse.horse_id)
+            .map((r) => ({
+              horseId: r.horse_id!,
+              horseName: r.horse_name,
+              horseNumber: r.horse_number,
+              jockey: r.jockey,
+              popularity: r.popularity,
+            }))
+        );
+        setSameRaceLoading(false);
+      });
+  }, [horseA?.raceId, horseA?.horse.horse_id]);
 
   // 年月リスト（降順・重複なし）
   const yearMonths = useMemo(() => {
@@ -399,20 +442,89 @@ function HorseSelectModal({
         </div>
 
         <div className="flex border-b border-[var(--kaiko-border)]">
-          {(["race", "name"] as const).map((t) => (
+          {/* 「同じレースから」タブ: horseA.raceId がある場合のみ表示 */}
+          {horseA?.raceId && (
             <button
-              key={t}
-              onClick={() => setTab(t)}
+              onClick={() => setTab("same")}
               className={`flex-1 py-2.5 text-[12px] font-bold transition-colors ${
-                tab === t
+                tab === "same"
                   ? "border-b-2 border-[var(--kaiko-primary)] text-[var(--kaiko-primary)]"
                   : "text-[var(--kaiko-text-muted)]"
               }`}
             >
-              {t === "race" ? "レースから選ぶ" : "馬名から選ぶ"}
+              同じレース
             </button>
-          ))}
+          )}
+          <button
+            onClick={() => setTab("race")}
+            className={`flex-1 py-2.5 text-[12px] font-bold transition-colors ${
+              tab === "race"
+                ? "border-b-2 border-[var(--kaiko-primary)] text-[var(--kaiko-primary)]"
+                : "text-[var(--kaiko-text-muted)]"
+            }`}
+          >
+            {horseA?.raceId ? "他レース" : "レースから選ぶ"}
+          </button>
+          <button
+            onClick={() => setTab("name")}
+            className={`flex-1 py-2.5 text-[12px] font-bold transition-colors ${
+              tab === "name"
+                ? "border-b-2 border-[var(--kaiko-primary)] text-[var(--kaiko-primary)]"
+                : "text-[var(--kaiko-text-muted)]"
+            }`}
+          >
+            馬名から選ぶ
+          </button>
         </div>
+
+        {/* 「同じレースから」タブパネル */}
+        {tab === "same" && horseA?.raceId && (
+          <div className="overflow-y-auto flex-1">
+            <div className="px-4 py-2 bg-gray-50 border-b border-[var(--kaiko-border)]">
+              <p className="text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase font-[family-name:var(--font-rajdhani)] tracking-wider">
+                同じレースの出走馬
+              </p>
+            </div>
+            {sameRaceLoading ? (
+              <p className="py-8 text-center text-sm text-[var(--kaiko-text-muted)]">読み込み中...</p>
+            ) : sameRaceHorses.length === 0 ? (
+              <p className="py-8 text-center text-sm text-[var(--kaiko-text-muted)]">
+                同レースの出走馬データがありません
+              </p>
+            ) : (
+              sameRaceHorses.map(({ horseId, horseName, horseNumber, jockey, popularity }) => (
+                <button
+                  key={horseId}
+                  onClick={() => { onSelect(horseId, horseA.raceId); onClose(); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 border-b border-[var(--kaiko-border)] hover:bg-gray-50 text-left active:bg-gray-100"
+                >
+                  {/* 馬番 */}
+                  <span className="text-base font-black text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] w-6 text-right flex-shrink-0">
+                    {horseNumber ?? "—"}
+                  </span>
+                  {/* 馬名・騎手 */}
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-bold text-[var(--kaiko-text-main)] block truncate">
+                      {horseName}
+                    </span>
+                    {jockey && (
+                      <span className="text-[11px] text-[var(--kaiko-text-muted)]">{jockey}</span>
+                    )}
+                  </div>
+                  {/* 人気 */}
+                  {popularity != null && (
+                    <span className="text-[11px] font-bold text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] flex-shrink-0">
+                      {popularity}人気
+                    </span>
+                  )}
+                  <span className="material-symbols-outlined text-[16px] text-[var(--kaiko-text-muted)] flex-shrink-0">
+                    chevron_right
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        )}
 
         {tab === "race" && (
           <div className="overflow-y-auto flex-1">
@@ -530,7 +642,7 @@ function HorseSelectModal({
                   raceHorses.map(({ horse, finish_order, eval_tag }) => (
                     <button
                       key={horse.horse_id}
-                      onClick={() => { onSelect(horse.horse_id); onClose(); }}
+                      onClick={() => { onSelect(horse.horse_id, selectedRace.race_id); onClose(); }}
                       className="w-full flex items-center gap-3 px-4 py-3 border-b border-[var(--kaiko-border)] hover:bg-gray-50 text-left"
                     >
                       <span className="text-base font-black text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] w-6 text-right flex-shrink-0">
@@ -677,11 +789,13 @@ export default function CompareClient() {
     }
   }, [searchParams]);
 
-  const handleSelectHorse = useCallback(async (id: number) => {
+  const handleSelectHorse = useCallback(async (id: number, fromRaceId?: string) => {
     const opt = await fetchHorseOption(id);
     if (!opt) return;
-    if (modal === "A") setHorseA(opt);
-    else setHorseB(opt);
+    // 選んだレースのIDを付与（馬B選択時に「同じレースから」タブで使う）
+    const optWithRace: HorseOption = fromRaceId ? { ...opt, raceId: fromRaceId } : opt;
+    if (modal === "A") setHorseA(optWithRace);
+    else setHorseB(optWithRace);
   }, [modal]);
 
   // 直接対決
@@ -1046,7 +1160,11 @@ export default function CompareClient() {
       <BottomNav />
 
       {modal && (
-        <HorseSelectModal onSelect={handleSelectHorse} onClose={() => setModal(null)} />
+        <HorseSelectModal
+          onSelect={handleSelectHorse}
+          onClose={() => setModal(null)}
+          horseA={modal === "B" && horseA ? horseA : undefined}
+        />
       )}
 
       {showBenchmarkModal && (
