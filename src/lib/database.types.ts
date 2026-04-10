@@ -271,8 +271,8 @@ export function calcHorsePicks(
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
 
-  // eligible が2頭未満では印を付けない（1頭だと勝率100%になるため）
-  if (eligible.length < 2) return result;
+  // eligible が0頭なら印なし
+  if (eligible.length < 1) return result;
 
   // ── 確率補正 ────────────────────────────────────────────────────
   // eligible 内でのソフトマックス（相対的強さの比率）
