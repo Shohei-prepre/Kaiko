@@ -397,14 +397,22 @@ export default function RacesClient() {
                 </button>
               );
             })}
-            {/* 今週・来週以外が選ばれている場合に表示 */}
-            {!isThisWeek && !isNextWeek && (
-              <div className="flex-1 pb-3 text-center border-b-2 border-[var(--kaiko-primary)] text-[var(--kaiko-primary)]">
-                <span className="block text-[10px] font-[family-name:var(--font-rajdhani)] font-bold uppercase tracking-widest">Selected</span>
-                <span className="text-sm font-bold">指定週</span>
-                <span className="block text-[10px] font-[family-name:var(--font-rajdhani)]">{currentWeek.label}</span>
-              </div>
-            )}
+            {/* 指定週タブ：常に表示。クリックでモーダルを開く */}
+            <button
+              onClick={() => setShowModal(true)}
+              style={{ touchAction: "manipulation" }}
+              className={`flex-1 pb-3 text-center transition-colors ${
+                !isThisWeek && !isNextWeek
+                  ? "border-b-2 border-[var(--kaiko-primary)] text-[var(--kaiko-primary)]"
+                  : "text-[var(--kaiko-on-surface-variant)] opacity-60"
+              }`}
+            >
+              <span className="block text-[10px] font-[family-name:var(--font-rajdhani)] font-bold uppercase tracking-widest">Selected</span>
+              <span className="text-sm font-bold">指定週</span>
+              <span className="block text-[10px] font-[family-name:var(--font-rajdhani)]">
+                {!isThisWeek && !isNextWeek ? currentWeek.label : "—"}
+              </span>
+            </button>
           </div>
         </div>
 
