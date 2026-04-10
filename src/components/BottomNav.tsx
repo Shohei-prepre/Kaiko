@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const tabs = [
   { label: "レース", icon: "format_list_bulleted", href: "/races" },
+  { label: "注目馬", icon: "tips_and_updates", href: "/picks" },
   { label: "能力比較", icon: "analytics", href: "/compare" },
 ];
 
