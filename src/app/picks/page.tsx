@@ -530,16 +530,20 @@ function PickHorseRow({ entry, isLast }: { entry: PickEntry; isLast: boolean }) 
           {/* EV・勝率 */}
           <div className="grid grid-cols-2 gap-2 mb-2">
             <div className="bg-white/60 rounded-lg px-3 py-2 text-center">
-              <div className="font-[family-name:var(--font-bebas-neue)] text-xl text-[var(--kaiko-text-main)]">
+              <div className={`font-[family-name:var(--font-bebas-neue)] text-xl ${
+                pick.ev >= 1.0 ? "text-emerald-600" : "text-[var(--kaiko-text-main)]"
+              }`}>
                 {pick.ev.toFixed(2)}
               </div>
-              <div className="text-[9px] font-bold text-[var(--kaiko-text-muted)] uppercase tracking-wider">期待値 (EV)</div>
+              <div className="text-[9px] font-bold text-[var(--kaiko-text-muted)] uppercase tracking-wider">EV（回収率目安）</div>
+              <div className="text-[8px] text-[var(--kaiko-text-muted)]">{pick.ev >= 1.0 ? "▲理論プラス" : "▼理論マイナス"}</div>
             </div>
             <div className="bg-white/60 rounded-lg px-3 py-2 text-center">
               <div className="font-[family-name:var(--font-bebas-neue)] text-xl text-[var(--kaiko-text-main)]">
                 {pick.winProb.toFixed(1)}%
               </div>
               <div className="text-[9px] font-bold text-[var(--kaiko-text-muted)] uppercase tracking-wider">推定勝率</div>
+              <div className="text-[8px] text-[var(--kaiko-text-muted)]">全頭補正済</div>
             </div>
           </div>
 

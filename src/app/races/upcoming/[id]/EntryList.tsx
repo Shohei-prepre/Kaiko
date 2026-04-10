@@ -233,17 +233,23 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
                       <p className="text-[10px] text-[var(--kaiko-text-muted)]">{pickStyle.desc}</p>
                     </div>
                     <div className="ml-auto text-right">
-                      <span className="text-[10px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] block">期待値</span>
-                      <span className="text-[18px] font-black font-[family-name:var(--font-rajdhani)] text-[var(--kaiko-primary)] leading-none">
+                      <span className="text-[10px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] block">EV（回収率目安）</span>
+                      <span className={`text-[18px] font-black font-[family-name:var(--font-rajdhani)] leading-none ${
+                        pick.ev >= 1.0 ? "text-emerald-600" : "text-[var(--kaiko-text-sub)]"
+                      }`}>
                         {pick.ev.toFixed(2)}
                       </span>
+                      <span className="text-[9px] text-[var(--kaiko-text-muted)] block">{pick.ev >= 1.0 ? "▲ 理論プラス" : "▼ 理論マイナス"}</span>
                     </div>
                   </div>
 
                   {/* 推定勝率 */}
                   <div className="bg-white/70 rounded-lg p-2.5">
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase font-[family-name:var(--font-rajdhani)] tracking-wider">推定勝率</span>
+                      <div>
+                        <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase font-[family-name:var(--font-rajdhani)] tracking-wider">推定勝率</span>
+                        <span className="text-[9px] text-[var(--kaiko-text-muted)] block">補正スコアベース・全頭補正済</span>
+                      </div>
                       <span className="text-[14px] font-black text-[var(--kaiko-text-main)] font-[family-name:var(--font-rajdhani)]">
                         {pick.winProb.toFixed(1)}%
                       </span>
@@ -254,6 +260,9 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
                         style={{ width: `${Math.min(pick.winProb, 100)}%` }}
                       />
                     </div>
+                    <p className="text-[9px] text-[var(--kaiko-text-muted)] mt-1 leading-snug">
+                      ※データあり馬全体を全頭数で補正した理論確率。実際のオッズとの差が期待値の根拠。
+                    </p>
                   </div>
 
                   {/* 逆張り詳細（isValueBetの場合） */}

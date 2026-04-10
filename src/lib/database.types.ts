@@ -233,11 +233,19 @@ export interface HorsePick {
 /**
  * 出走馬ごとの推奨シンボルと期待値を計算する。
  *
- * - 過去2走以上の非度外視データがない馬は除外（Map に含めない）
- * - 補正スコア平均をソフトマックス変換して勝率を推定
- * - EV = 推定勝率 × 単勝オッズ で各馬をスコアリング
- * - ◎○▲△：EV 降順上位 4 頭（各 1 頭）
- * - ★：逆張り買いフラグ馬のうち EV 最高かつ ◎○▲△ 外の 1 頭
+ * 【確率推定の考え方】
+ * - データがある馬（eligible）に対してソフトマックスで「相対的な強さ」を計算
+ * - しかし eligible が全出走頭数より少ない場合、残りの馬にも確率がある
+ * - そのため eligible の合計確率を (eligible数 / 全頭数) に圧縮し、
+ *   残り (1 - eligibleShare) を eligible 外の馬に均等分配する補正を行う
+ * - これにより「データが1頭だけ → 勝率100%」という過大評価を防ぐ
+ *
+ * 【EVの意味】
+ * - EV = 推定勝率(%) × 単勝オッズ / 100
+ * - EV > 1.0 なら「理論上プラス収支」の馬
+ * - 印は EV 降順で ◎○▲△ を割り当て
+ *
+ * - ★：逆張りフラグ馬のうち EV 最高かつ ◎○▲△ 外の 1 頭
  * - ✓：データあり・上記以外
  *
  * @param k ソフトマックス感度（大きいほどスコア差が確率差に強く出る）
@@ -248,6 +256,9 @@ export function calcHorsePicks(
   k = 0.3
 ): Map<number, HorsePick> {
   const result = new Map<number, HorsePick>();
+
+  const totalEntries = entries.length;
+  if (totalEntries === 0) return result;
 
   // 過去2走以上の非度外視データ + オッズがある馬のみ対象
   const eligible = entries
@@ -260,15 +271,24 @@ export function calcHorsePicks(
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
 
-  if (eligible.length === 0) return result;
+  // eligible が2頭未満では印を付けない（1頭だと勝率100%になるため）
+  if (eligible.length < 2) return result;
 
-  // ソフトマックス: スコアが低い（強い）ほど高い確率
+  // ── 確率補正 ────────────────────────────────────────────────────
+  // eligible 内でのソフトマックス（相対的強さの比率）
   const raws = eligible.map((h) => Math.exp(-h.avg * k));
-  const total = raws.reduce((a, b) => a + b, 0);
+  const rawTotal = raws.reduce((a, b) => a + b, 0);
+
+  // eligible 全体に割り当てる確率シェア = eligible数 / 全頭数
+  // 例: 18頭中4頭データあり → eligible には 4/18 = 22.2% を割り当て
+  const eligibleShare = eligible.length / totalEntries;
 
   const evList = eligible.map((h, i) => {
-    const prob = raws[i] / total;
-    return { horse_id: h.horse_id, prob, ev: prob * h.odds };
+    // ソフトマックス比率 × eligibleShare = この馬の推定勝率
+    const prob = (raws[i] / rawTotal) * eligibleShare;
+    // EV = 推定勝率 × 単勝オッズ（1.0 = 回収率100%の基準）
+    const ev = prob * h.odds;
+    return { horse_id: h.horse_id, prob, ev };
   });
 
   // EV 降順にソート
@@ -296,12 +316,12 @@ export function calcHorsePicks(
     symbolMap.set(bestStar.horse_id, "★");
   }
 
-  // 結果 Map を組み立て
+  // 結果 Map を組み立て（確率は % 表示、EV は小数2桁）
   evList.forEach((h) => {
     result.set(h.horse_id, {
       symbol: symbolMap.get(h.horse_id)!,
-      winProb: Math.round(h.prob * 1000) / 10,
-      ev: Math.round(h.ev * 100) / 100,
+      winProb: Math.round(h.prob * 1000) / 10,   // 例: 0.123 → 12.3%
+      ev: Math.round(h.ev * 100) / 100,           // 例: 1.23
     });
   });
 
