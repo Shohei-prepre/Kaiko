@@ -30,7 +30,16 @@ interface RaceWithPicks {
   grade: string;
   surface: string;
   distance: number;
+  raceNumber: number | null;
   entries: PickEntry[];
+}
+
+/** calcValueBetDetails と同じ構造をローカルで保持 */
+interface HorseStats {
+  abilityRank: number;   // 補正スコア平均の昇順ランク（1=最強）
+  oddsRank: number;      // 人気順（1=最人気）
+  avgScore: number;      // 補正スコア平均
+  racesAnalyzed: number; // 分析に使った走数
 }
 
 interface PickEntry {
@@ -43,6 +52,7 @@ interface PickEntry {
   popularity: number | null;
   jockey: string | null;
   pick: HorsePick | null;
+  stats: HorseStats | null; // 全馬に出せる場合は入れる
 }
 
 // ─── スタイル定数 ─────────────────────────────────────────────────
@@ -72,6 +82,49 @@ function formatDate(d: string) {
 
 // ─── データ取得 ───────────────────────────────────────────────────
 
+/** レースごとの全馬スタッツを計算（calcValueBetDetails の内部ロジックを再利用） */
+function calcAllHorseStats(
+  withForm: UpcomingEntryWithForm[]
+): Map<number, HorseStats> {
+  const result = new Map<number, HorseStats>();
+
+  // 補正スコア計算（calcCorrectedScore と同じロジック）
+  function correctedScore(p: RecentPerf): number {
+    const ability =
+      (p.trouble_value ?? 0) +
+      (p.temperament_value ?? 0) +
+      (p.weight_effect_value ?? 0) +
+      (p.track_condition_value ?? 0) +
+      (p.pace_effect_value ?? 0);
+    return p.finish_order - ability;
+  }
+
+  const scored = withForm
+    .filter((e) => e.horse_id !== null && e.popularity !== null)
+    .map((e) => {
+      const valid = e.recentPerfs.filter(
+        (p) => p.eval_tag !== "disregard" && p.eval_tag !== "above"
+      );
+      if (valid.length < 2) return null;
+      const avg = valid.reduce((sum, p) => sum + correctedScore(p), 0) / valid.length;
+      return { horse_id: e.horse_id!, avg, oddsRank: e.popularity!, racesAnalyzed: valid.length };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+
+  // 能力ランク: avg 昇順
+  const sorted = [...scored].sort((a, b) => a.avg - b.avg);
+  sorted.forEach((x, i) => {
+    result.set(x.horse_id, {
+      abilityRank: i + 1,
+      oddsRank: x.oddsRank,
+      avgScore: Math.round(x.avg * 10) / 10,
+      racesAnalyzed: x.racesAnalyzed,
+    });
+  });
+
+  return result;
+}
+
 async function fetchPicksData(): Promise<RaceWithPicks[]> {
   try {
     const today = new Date().toISOString().slice(0, 10);
@@ -79,7 +132,7 @@ async function fetchPicksData(): Promise<RaceWithPicks[]> {
     // 今日以降の upcoming_races を取得
     const { data: upcomingRaces } = await (supabase as any)
       .from("upcoming_races")
-      .select("race_id, race_name, race_date, track, grade, surface, distance")
+      .select("race_id, race_name, race_date, track, grade, surface, distance, race_number")
       .gte("race_date", today)
       .order("race_date")
       .order("race_number");
@@ -197,6 +250,7 @@ async function fetchPicksData(): Promise<RaceWithPicks[]> {
       grade: string;
       surface: string;
       distance: number;
+      race_number: number | null;
     }[]) {
       const raceEntries = entries.filter((e) => e.race_id === race.race_id);
       if (raceEntries.length === 0) continue;
@@ -213,6 +267,7 @@ async function fetchPicksData(): Promise<RaceWithPicks[]> {
 
       const valueBetMap = calcValueBetDetails(withForm);
       const picksMap = calcHorsePicks(withForm, valueBetMap);
+      const statsMap = calcAllHorseStats(withForm);
 
       // ◎○▲△★ がある馬のみピックアップ
       const notableEntries: PickEntry[] = [];
@@ -230,6 +285,7 @@ async function fetchPicksData(): Promise<RaceWithPicks[]> {
           popularity: e.popularity,
           jockey: e.jockey,
           pick,
+          stats: hid ? (statsMap.get(hid) ?? null) : null,
         });
       }
 
@@ -249,6 +305,7 @@ async function fetchPicksData(): Promise<RaceWithPicks[]> {
         grade: race.grade,
         surface: race.surface,
         distance: race.distance,
+        raceNumber: race.race_number,
         entries: notableEntries,
       });
     }
@@ -268,14 +325,20 @@ export default function PicksPage() {
   const [expandedRaces, setExpandedRaces] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    fetchPicksData().then((data) => {
-      setRaces(data);
-      // デフォルトで最初のレースを展開
-      if (data.length > 0) {
-        setExpandedRaces(new Set([data[0].raceId]));
-      }
-      setLoading(false);
-    });
+    fetchPicksData()
+      .then((data) => {
+        setRaces(data);
+        // デフォルトで最初のレースを展開
+        if (data.length > 0) {
+          setExpandedRaces(new Set([data[0].raceId]));
+        }
+      })
+      .catch((err) => {
+        console.error("fetchPicksData error:", err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
   const totalHorses = races.reduce((sum, r) => sum + r.entries.length, 0);
@@ -345,8 +408,15 @@ export default function PicksPage() {
                       {race.grade}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[13px] font-black text-[var(--kaiko-text-main)] truncate">
-                        {race.raceName}
+                      <div className="flex items-baseline gap-1.5">
+                        {race.raceNumber !== null && (
+                          <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] shrink-0">
+                            R{race.raceNumber}
+                          </span>
+                        )}
+                        <div className="text-[13px] font-black text-[var(--kaiko-text-main)] truncate">
+                          {race.raceName}
+                        </div>
                       </div>
                       <div className="text-[10px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)]">
                         {formatDate(race.raceDate)} · {race.track} · {race.surface}{race.distance}m
@@ -474,13 +544,61 @@ function PickHorseRow({ entry, isLast }: { entry: PickEntry; isLast: boolean }) 
           </div>
 
           {/* 印の意味説明 */}
-          <p className="text-[11px] text-[var(--kaiko-text-sub)] leading-relaxed">
+          <p className="text-[11px] text-[var(--kaiko-text-sub)] leading-relaxed mb-3">
             {pick.symbol === "◎" && "最も期待値が高い馬。近走の補正スコアと単勝オッズから算出。"}
             {pick.symbol === "○" && "期待値2位の馬。複数のデータから安定した実力を示している。"}
             {pick.symbol === "▲" && "期待値3位の馬。対抗として検討に値する。"}
             {pick.symbol === "△" && "期待値4位の馬。複穴候補として抑えておきたい。"}
             {pick.symbol === "★" && "能力ランクに対して人気が低い逆張り買い候補。期待値が高い穴馬。"}
           </p>
+
+          {/* 能力データ（データがある馬は全馬表示） */}
+          {entry.stats ? (
+            <div className="bg-white/70 rounded-lg px-3 py-2.5 mb-2">
+              <div className="text-[9px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider mb-2">能力データ</div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-[10px] text-[var(--kaiko-text-sub)]">能力推定ランク</span>
+                  <span className="font-[family-name:var(--font-rajdhani)] text-[13px] font-bold text-[var(--kaiko-text-main)]">
+                    {entry.stats.abilityRank}位
+                  </span>
+                </div>
+                <div className="flex justify-between items-baseline">
+                  <span className="text-[10px] text-[var(--kaiko-text-sub)]">現在人気</span>
+                  <span className="font-[family-name:var(--font-rajdhani)] text-[13px] font-bold text-[var(--kaiko-text-main)]">
+                    {entry.stats.oddsRank}番人気
+                  </span>
+                </div>
+                <div className="flex justify-between items-baseline">
+                  <span className="text-[10px] text-[var(--kaiko-text-sub)]">補正スコア平均</span>
+                  <span className={`font-[family-name:var(--font-rajdhani)] text-[13px] font-bold ${
+                    entry.stats.avgScore <= 2 ? "text-[var(--kaiko-sym-good)]" :
+                    entry.stats.avgScore <= 4 ? "text-[var(--kaiko-sym-great)]" :
+                    "text-[var(--kaiko-text-main)]"
+                  }`}>
+                    {entry.stats.avgScore.toFixed(1)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-baseline">
+                  <span className="text-[10px] text-[var(--kaiko-text-sub)]">分析走数</span>
+                  <span className="font-[family-name:var(--font-rajdhani)] text-[13px] font-bold text-[var(--kaiko-text-main)]">
+                    {entry.stats.racesAnalyzed}走
+                  </span>
+                </div>
+              </div>
+              {pick.symbol === "★" && entry.stats.abilityRank < entry.stats.oddsRank && (
+                <div className="mt-2 pt-2 border-t border-[var(--kaiko-border)]">
+                  <span className="text-[10px] text-rose-600 font-bold">
+                    能力{entry.stats.abilityRank}位 vs 人気{entry.stats.oddsRank}番人気 — 能力の割に人気がない馬
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-white/50 rounded-lg px-3 py-2 mb-2 text-center">
+              <span className="text-[10px] text-[var(--kaiko-text-muted)]">近走データ不足のため能力データなし</span>
+            </div>
+          )}
 
           {/* 馬詳細へのリンク */}
           {entry.horseId && (
