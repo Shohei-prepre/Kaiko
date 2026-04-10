@@ -105,7 +105,7 @@ function calcAllHorseStats(
       const valid = e.recentPerfs.filter(
         (p) => p.eval_tag !== "disregard" && p.eval_tag !== "above"
       );
-      if (valid.length < 2) return null;
+      if (valid.length < 1) return null;
       const avg = valid.reduce((sum, p) => sum + correctedScore(p), 0) / valid.length;
       return { horse_id: e.horse_id!, avg, oddsRank: e.popularity!, racesAnalyzed: valid.length };
     })
