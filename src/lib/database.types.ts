@@ -174,7 +174,7 @@ export interface ValueBetDetail {
 
 /**
  * 出走前レースの「逆張り買い」詳細。
- * 各馬の直近5走（disregard除外、最低2走必要）の補正スコア平均でランク付けし、
+ * 各馬の直近5走（disregard除外、最低1走必要）の補正スコア平均でランク付けし、
  * 能力ランク < 人気ランク（能力の割に人気がない）の馬を返す。
  *
  * 返り値: horse_id → ValueBetDetail の Map（フラグ立ちの馬のみ）
@@ -188,8 +188,8 @@ export function calcValueBetDetails(
     .filter((e) => e.horse_id !== null && e.odds !== null && e.popularity !== null)
     .map((e) => {
       const valid = e.recentPerfs.filter((p) => p.eval_tag !== "disregard" && p.eval_tag !== "above");
-      // 最低2走の非度外視データが必要（1走だけでは信頼性が低い）
-      if (valid.length < 2) return null;
+      // 最低1走の非度外視データが必要
+      if (valid.length < 1) return null;
       const avg = valid.reduce((sum, p) => sum + calcCorrectedScore(p), 0) / valid.length;
       return { horse_id: e.horse_id!, avg, oddsRank: e.popularity!, racesAnalyzed: valid.length };
     })
@@ -260,12 +260,12 @@ export function calcHorsePicks(
   const totalEntries = entries.length;
   if (totalEntries === 0) return result;
 
-  // 過去2走以上の非度外視データ + オッズがある馬のみ対象
+  // 過去1走以上の非度外視データ + オッズがある馬のみ対象
   const eligible = entries
     .map((e) => {
       if (!e.horse_id || !e.odds) return null;
       const valid = e.recentPerfs.filter((p) => p.eval_tag !== "disregard" && p.eval_tag !== "above");
-      if (valid.length < 2) return null;
+      if (valid.length < 1) return null;
       const avg = valid.reduce((sum, p) => sum + calcCorrectedScore(p), 0) / valid.length;
       return { horse_id: e.horse_id, avg, odds: e.odds };
     })
