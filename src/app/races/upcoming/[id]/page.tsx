@@ -9,6 +9,7 @@ import type {
   EvalTag,
 } from "@/lib/database.types";
 import { isBuyCandidate, calcValueBetDetails, calcHorsePicks } from "@/lib/database.types";
+import { getCourseCharacteristic } from "@/lib/courseCharacteristics";
 import BottomNav from "@/components/BottomNav";
 import BackButton from "@/components/BackButton";
 import EntryList from "./EntryList";
@@ -213,6 +214,7 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
 
   const gradeBadge = GRADE_BADGE[race.grade] ?? GRADE_BADGE["OP"];
   const surfaceBadge = SURFACE_BADGE[race.surface] ?? SURFACE_BADGE["芝"];
+  const courseChar = getCourseCharacteristic(race.track, race.surface, race.distance);
 
   // Client Componentに渡すためにMapをArrayに変換
   const valueBetArr = Array.from(valueBetMap.entries());
@@ -272,6 +274,41 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
             </div>
           </div>
         </section>
+
+        {/* コース特性カード */}
+        {courseChar && (
+          <section className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[var(--kaiko-border)] overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border-b border-[var(--kaiko-border)]">
+              <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-[16px]">map</span>
+              <span className="text-[10px] font-black text-[var(--kaiko-text-main)] uppercase tracking-wider">
+                コース特性 — {race.track} {race.surface}{race.distance}m
+              </span>
+            </div>
+            <div className="divide-y divide-[var(--kaiko-border)]">
+              <div className="flex gap-3 px-4 py-2.5">
+                <span className="material-symbols-outlined text-amber-500 text-[15px] shrink-0 mt-0.5">directions_run</span>
+                <div>
+                  <span className="block text-[9px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider mb-0.5">脚質傾向</span>
+                  <span className="text-[12px] font-bold text-[var(--kaiko-text-main)] leading-snug">{courseChar.runningStyle}</span>
+                </div>
+              </div>
+              <div className="flex gap-3 px-4 py-2.5">
+                <span className="material-symbols-outlined text-blue-500 text-[15px] shrink-0 mt-0.5">grid_view</span>
+                <div>
+                  <span className="block text-[9px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider mb-0.5">枠順傾向</span>
+                  <span className="text-[12px] font-bold text-[var(--kaiko-text-main)] leading-snug">{courseChar.postBias}</span>
+                </div>
+              </div>
+              <div className="flex gap-3 px-4 py-2.5">
+                <span className="material-symbols-outlined text-emerald-500 text-[15px] shrink-0 mt-0.5">info</span>
+                <div>
+                  <span className="block text-[9px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider mb-0.5">特記</span>
+                  <span className="text-[12px] font-bold text-[var(--kaiko-text-main)] leading-snug">{courseChar.notes}</span>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* オッズ更新バナー */}
         <div className="flex items-center gap-2 bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[var(--kaiko-border)] px-4 py-3">
