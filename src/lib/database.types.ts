@@ -132,6 +132,12 @@ export interface RecentPerf {
   finish_order: number;
   margin: number | null;
   eval_tag: EvalTag | null;
+  // ability_value 計算用
+  trouble_value: number | null;
+  temperament_value: number | null;
+  weight_effect_value: number | null;
+  track_condition_value: number | null;
+  pace_effect_value: number | null;
 }
 
 export interface UpcomingEntryWithForm extends UpcomingEntry {
@@ -142,6 +148,53 @@ export interface UpcomingEntryWithForm extends UpcomingEntry {
 export function isBuyCandidate(recentPerfs: RecentPerf[]): boolean {
   const valid = recentPerfs.filter((p) => p.eval_tag !== "disregard");
   return valid.filter((p) => p.eval_tag === "below").length >= 2;
+}
+
+/** 1走分の補正後スコアを計算（小さいほど強い） */
+function calcCorrectedScore(perf: RecentPerf): number {
+  const ability =
+    (perf.trouble_value ?? 0) +
+    (perf.temperament_value ?? 0) +
+    (perf.weight_effect_value ?? 0) +
+    (perf.track_condition_value ?? 0) +
+    (perf.pace_effect_value ?? 0);
+  return perf.finish_order - ability;
+}
+
+/**
+ * 出走前レースの「買い」逆張りフラグ。
+ * 各馬の直近5走（disregard除外）の補正スコア平均でランク付けし、
+ * 能力ランク < オッズランク（能力の割に人気がない）の馬にフラグを立てる。
+ *
+ * 返り値: 買いフラグが立つ horse_id の Set
+ */
+export function calcValueBetFlags(
+  entries: UpcomingEntryWithForm[]
+): Set<number> {
+  // 過去データがある馬だけ対象
+  type Scored = { horse_id: number; abilityRank: number; oddsRank: number };
+  const scored: Scored[] = [];
+
+  const withScore = entries
+    .filter((e) => e.horse_id !== null && e.recentPerfs.length > 0 && e.odds !== null)
+    .map((e) => {
+      const valid = e.recentPerfs.filter((p) => p.eval_tag !== "disregard");
+      if (valid.length === 0) return null;
+      const avg = valid.reduce((sum, p) => sum + calcCorrectedScore(p), 0) / valid.length;
+      return { horse_id: e.horse_id!, avg, oddsRank: e.popularity ?? 99 };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+
+  // 能力ランク: avg 昇順（小さいほど強い）
+  const sorted = [...withScore].sort((a, b) => a.avg - b.avg);
+  sorted.forEach((x, i) => {
+    scored.push({ horse_id: x.horse_id, abilityRank: i + 1, oddsRank: x.oddsRank });
+  });
+
+  // 能力ランク < オッズランク → 買い
+  return new Set(
+    scored.filter((x) => x.abilityRank < x.oddsRank).map((x) => x.horse_id)
+  );
 }
 
 export type Database = {

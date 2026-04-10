@@ -47,6 +47,10 @@ export default function RootLayout({
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
         />
+        {/* Figma capture script - remove after export */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script src="https://mcp.figma.com/mcp/html-to-design/capture.js"></script>
       </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

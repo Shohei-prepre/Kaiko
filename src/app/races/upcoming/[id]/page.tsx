@@ -8,7 +8,7 @@ import type {
   RecentPerf,
   EvalTag,
 } from "@/lib/database.types";
-import { isBuyCandidate } from "@/lib/database.types";
+import { isBuyCandidate, calcValueBetFlags } from "@/lib/database.types";
 import BottomNav from "@/components/BottomNav";
 
 interface Props {
@@ -75,6 +75,11 @@ async function getRecentPerfsForHorses(
         finish_order,
         margin,
         eval_tag,
+        trouble_value,
+        temperament_value,
+        weight_effect_value,
+        track_condition_value,
+        pace_effect_value,
         races ( race_name, race_date )
       `)
       .in("horse_id", horseIds);
@@ -86,6 +91,11 @@ async function getRecentPerfsForHorses(
       finish_order: number;
       margin: number | null;
       eval_tag: EvalTag | null;
+      trouble_value: number | null;
+      temperament_value: number | null;
+      weight_effect_value: number | null;
+      track_condition_value: number | null;
+      pace_effect_value: number | null;
       races: { race_name: string; race_date: string } | null;
     };
 
@@ -107,6 +117,11 @@ async function getRecentPerfsForHorses(
           finish_order: p.finish_order,
           margin: p.margin,
           eval_tag: p.eval_tag,
+          trouble_value: p.trouble_value,
+          temperament_value: p.temperament_value,
+          weight_effect_value: p.weight_effect_value,
+          track_condition_value: p.track_condition_value,
+          pace_effect_value: p.pace_effect_value,
         }));
       result.set(hid, sorted);
     }
@@ -218,6 +233,7 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
   }));
 
   const buyCandidates = entriesWithForm.filter((e) => isBuyCandidate(e.recentPerfs));
+  const valueBetIds = calcValueBetFlags(entriesWithForm);
 
   const gradeBadge = GRADE_BADGE[race.grade] ?? GRADE_BADGE["OP"];
   const surfaceBadge = SURFACE_BADGE[race.surface] ?? SURFACE_BADGE["芝"];
@@ -338,6 +354,7 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
           ) : (
             entriesWithForm.map((entry) => {
               const isCandidate = isBuyCandidate(entry.recentPerfs);
+              const isValueBet = entry.horse_id !== null && valueBetIds.has(entry.horse_id);
               const waku = entry.frame_number ?? 1;
               const wakuStyle = WAKU_STYLES[Math.min(waku, 8)] ?? WAKU_STYLES[1];
               const horseHref = entry.horse_id ? `/horses/${entry.horse_id}` : undefined;
@@ -346,6 +363,7 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
                 <div
                   key={entry.id}
                   className={`border-b border-[var(--kaiko-border)] last:border-b-0 ${
+                    isValueBet ? "bg-amber-50/50 border-l-2 border-l-amber-400" :
                     isCandidate ? "bg-emerald-50/40 border-l-2 border-l-emerald-400" : ""
                   }`}
                 >
@@ -388,12 +406,20 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
                           </span>
                         )}
                       </div>
-                      {isCandidate && (
-                        <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--kaiko-eval-positive-bg)] border border-emerald-200 text-[var(--kaiko-eval-positive-text)] mt-1">
-                          <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>trending_up</span>
-                          次走買い候補
-                        </span>
-                      )}
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {isValueBet && (
+                          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-300 text-amber-700">
+                            <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                            逆張り買い
+                          </span>
+                        )}
+                        {isCandidate && (
+                          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--kaiko-eval-positive-bg)] border border-emerald-200 text-[var(--kaiko-eval-positive-text)]">
+                            <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>trending_up</span>
+                            次走買い候補
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* オッズ・近3走 */}
