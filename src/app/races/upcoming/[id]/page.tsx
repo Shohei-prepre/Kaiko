@@ -9,8 +9,9 @@ import type {
   EvalTag,
 } from "@/lib/database.types";
 import { isBuyCandidate, calcValueBetDetails, calcHorsePicks } from "@/lib/database.types";
-import type { ValueBetDetail, HorsePick } from "@/lib/database.types";
 import BottomNav from "@/components/BottomNav";
+import BackButton from "@/components/BackButton";
+import EntryList from "./EntryList";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -38,7 +39,6 @@ async function getEntries(raceId: string, headCount: number | null): Promise<Upc
       .from("upcoming_entries" as never)
       .select("*")
       .eq("race_id", raceId);
-    // 補欠馬（horse_number > head_count）を除外
     if (headCount) query = (query as any).lte("horse_number", headCount);
     const { data, error } = await (query as any).order("popularity");
     if (error || !data) return [];
@@ -48,7 +48,6 @@ async function getEntries(raceId: string, headCount: number | null): Promise<Upc
   }
 }
 
-/** 馬名 → horse_id をDBで解決（horse_idがNULLの馬向け） */
 async function resolveHorseIdsByName(names: string[]): Promise<Map<string, number>> {
   const map = new Map<string, number>();
   if (names.length === 0) return map;
@@ -102,7 +101,6 @@ async function getRecentPerfsForHorses(
       races: { race_name: string; race_date: string } | null;
     };
 
-    // horse_id ごとに race_date 降順でソートして上位5件取得
     const byHorse = new Map<number, RawPerf[]>();
     for (const row of data as RawPerf[]) {
       if (!row.races) continue;
@@ -148,17 +146,6 @@ function formatOddsUpdated(iso: string | null): string {
   return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-const WAKU_STYLES: Record<number, { bg: string; border: string }> = {
-  1: { bg: "bg-white",         border: "border-gray-300" },
-  2: { bg: "bg-[#e2e8f0]",     border: "border-gray-300" },
-  3: { bg: "bg-[#fee2e2]",     border: "border-red-200" },
-  4: { bg: "bg-[#dbeafe]",     border: "border-blue-200" },
-  5: { bg: "bg-[#fef9c3]",     border: "border-yellow-300" },
-  6: { bg: "bg-[#dcfce7]",     border: "border-emerald-200" },
-  7: { bg: "bg-[#ffedd5]",     border: "border-orange-200" },
-  8: { bg: "bg-[#fce7f3]",     border: "border-pink-200" },
-};
-
 const GRADE_BADGE: Record<string, { border: string; bg: string; text: string }> = {
   G1: { border: "border-[#e8c060]", bg: "bg-[var(--kaiko-tag-gold-bg)]", text: "text-[var(--kaiko-tag-gold-text)]" },
   G2: { border: "border-[#e8c060]", bg: "bg-[var(--kaiko-tag-gold-bg)]", text: "text-[var(--kaiko-tag-gold-text)]" },
@@ -179,35 +166,16 @@ function Badge({ label, style }: { label: string; style: { border: string; bg: s
   );
 }
 
-// 近3走ミニバッジ（着順数字 + eval_tag 色）
-const EVAL_MINI: Record<string, { bg: string; border: string; text: string }> = {
-  below:     { bg: "bg-[var(--kaiko-eval-positive-bg)]", border: "border-emerald-200", text: "text-[var(--kaiko-eval-positive-text)]" },
-  fair:      { bg: "bg-[var(--kaiko-eval-neutral-bg)]",  border: "border-blue-200",    text: "text-[var(--kaiko-eval-neutral-text)]" },
-  above:     { bg: "bg-[var(--kaiko-eval-warning-bg)]",  border: "border-amber-200",   text: "text-[var(--kaiko-eval-warning-text)]" },
-  disregard: { bg: "bg-[var(--kaiko-eval-disregard-bg)]", border: "border-gray-200",   text: "text-[var(--kaiko-text-muted)]" },
+const WAKU_STYLES: Record<number, { bg: string; border: string }> = {
+  1: { bg: "bg-white",         border: "border-gray-300" },
+  2: { bg: "bg-[#e2e8f0]",     border: "border-gray-300" },
+  3: { bg: "bg-[#fee2e2]",     border: "border-red-200" },
+  4: { bg: "bg-[#dbeafe]",     border: "border-blue-200" },
+  5: { bg: "bg-[#fef9c3]",     border: "border-yellow-300" },
+  6: { bg: "bg-[#dcfce7]",     border: "border-emerald-200" },
+  7: { bg: "bg-[#ffedd5]",     border: "border-orange-200" },
+  8: { bg: "bg-[#fce7f3]",     border: "border-pink-200" },
 };
-
-const PICK_STYLE: Record<string, { text: string; weight: string }> = {
-  "◎": { text: "text-red-600",    weight: "font-black" },
-  "○": { text: "text-blue-600",   weight: "font-black" },
-  "▲": { text: "text-gray-800",   weight: "font-black" },
-  "△": { text: "text-gray-500",   weight: "font-bold"  },
-  "★": { text: "text-amber-500",  weight: "font-black" },
-  "✓": { text: "text-gray-300",   weight: "font-bold"  },
-};
-
-function EvalMiniBadge({ perf }: { perf: RecentPerf }) {
-  const tag = perf.eval_tag ?? "disregard";
-  const s = EVAL_MINI[tag] ?? EVAL_MINI.disregard;
-  const label = tag === "disregard" ? "-" : String(perf.finish_order);
-  return (
-    <span
-      className={`font-[family-name:var(--font-rajdhani)] text-[10px] font-black w-[18px] h-[18px] rounded flex items-center justify-center border ${s.bg} ${s.border} ${s.text}`}
-    >
-      {label}
-    </span>
-  );
-}
 
 // ── ページ本体 ──────────────────────────────────────────────────
 
@@ -218,13 +186,11 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
   if (!race) notFound();
   const entries = await getEntries(id, race.head_count);
 
-  // horse_id が NULL の馬を名前で解決
   const unlinkedNames = entries
     .filter((e) => e.horse_id === null)
     .map((e) => e.horse_name);
   const nameToIdMap = await resolveHorseIdsByName(unlinkedNames);
 
-  // 全 horse_id を収集（直接持っているもの + 名前解決したもの）
   const resolvedEntries = entries.map((e) => ({
     ...e,
     horse_id: e.horse_id ?? nameToIdMap.get(e.horse_name) ?? null,
@@ -248,17 +214,16 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
   const gradeBadge = GRADE_BADGE[race.grade] ?? GRADE_BADGE["OP"];
   const surfaceBadge = SURFACE_BADGE[race.surface] ?? SURFACE_BADGE["芝"];
 
+  // Client Componentに渡すためにMapをArrayに変換
+  const valueBetArr = Array.from(valueBetMap.entries());
+  const picksArr = Array.from(picksMap.entries());
+
   return (
     <>
       {/* ヘッダー */}
       <header className="fixed top-0 left-0 w-full z-50 flex items-center px-4 h-14 bg-white border-b border-[var(--kaiko-border)] shadow-sm">
         <div className="flex items-center w-full gap-3">
-          <Link
-            href="/races"
-            className="w-8 h-8 rounded-lg border border-[var(--kaiko-border)] bg-white flex items-center justify-center active:scale-95 duration-150"
-          >
-            <span className="material-symbols-outlined text-[var(--kaiko-text-main)] text-[18px]">arrow_back_ios_new</span>
-          </Link>
+          <BackButton />
           <div className="flex items-baseline gap-0.5">
             <span className="text-xl font-[family-name:var(--font-noto-sans-jp)] font-black tracking-tighter">回顧</span>
             <span className="text-xl font-[family-name:var(--font-noto-sans-jp)] font-black text-[var(--kaiko-primary)] italic">AI</span>
@@ -337,7 +302,28 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
           })}
         </div>
 
-        {/* 出走馬リスト */}
+        {/* 印の凡例 */}
+        <div className="flex items-center gap-2 px-1 flex-wrap">
+          <span className="font-[family-name:var(--font-rajdhani)] text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase tracking-wider">印：</span>
+          {(["◎", "○", "▲", "△", "★"] as const).map((sym) => {
+            const colors: Record<string, string> = {
+              "◎": "text-red-600", "○": "text-blue-600", "▲": "text-gray-800",
+              "△": "text-gray-500", "★": "text-amber-500",
+            };
+            const labels: Record<string, string> = {
+              "◎": "本命", "○": "対抗", "▲": "単穴", "△": "連下", "★": "逆張り",
+            };
+            return (
+              <div key={sym} className="flex items-center gap-0.5">
+                <span className={`text-[13px] font-black leading-none ${colors[sym]}`}>{sym}</span>
+                <span className="text-[9px] text-[var(--kaiko-text-muted)]">{labels[sym]}</span>
+              </div>
+            );
+          })}
+          <span className="text-[9px] text-[var(--kaiko-text-muted)]">タップで詳細</span>
+        </div>
+
+        {/* 出走馬リスト（Client Component） */}
         <div className="flex items-center gap-2 px-1 pt-1">
           <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-[18px]">list_alt</span>
           <span className="text-[12px] font-black text-[var(--kaiko-text-main)] uppercase tracking-wider">
@@ -345,177 +331,11 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
           </span>
         </div>
 
-        <section className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[var(--kaiko-border)] overflow-hidden">
-          {/* テーブルヘッダー */}
-          <div
-            className="grid gap-2 px-3 py-2.5 bg-gray-50 border-b border-[var(--kaiko-border)] items-center"
-            style={{ gridTemplateColumns: "20px 28px 24px 1fr 72px" }}
-          >
-            <span className="font-[family-name:var(--font-rajdhani)] text-[10px] font-black text-[var(--kaiko-text-muted)] text-center">印</span>
-            <span className="font-[family-name:var(--font-rajdhani)] text-[10px] font-black text-[var(--kaiko-text-muted)] text-center">枠</span>
-            <span className="font-[family-name:var(--font-rajdhani)] text-[10px] font-black text-[var(--kaiko-text-muted)] text-center">馬</span>
-            <span className="font-[family-name:var(--font-rajdhani)] text-[10px] font-black text-[var(--kaiko-text-muted)]">馬名 / 騎手</span>
-            <span className="font-[family-name:var(--font-rajdhani)] text-[10px] font-black text-[var(--kaiko-text-muted)] text-right">単勝 / 近走</span>
-          </div>
-
-          {entriesWithForm.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-[var(--kaiko-text-muted)]">
-              エントリーデータがありません
-            </div>
-          ) : (
-            entriesWithForm.map((entry) => {
-              const isCandidate = isBuyCandidate(entry.recentPerfs);
-              const vbDetail: ValueBetDetail | undefined = entry.horse_id ? valueBetMap.get(entry.horse_id) : undefined;
-              const isValueBet = vbDetail !== undefined;
-              const pick: HorsePick | undefined = entry.horse_id ? picksMap.get(entry.horse_id) : undefined;
-              const waku = entry.frame_number ?? 1;
-              const wakuStyle = WAKU_STYLES[Math.min(waku, 8)] ?? WAKU_STYLES[1];
-              const horseHref = entry.horse_id ? `/horses/${entry.horse_id}` : undefined;
-
-              return (
-                <div
-                  key={entry.id}
-                  className={`border-b border-[var(--kaiko-border)] last:border-b-0 ${
-                    isValueBet ? "bg-amber-50/50 border-l-2 border-l-amber-400" :
-                    isCandidate ? "bg-emerald-50/40 border-l-2 border-l-emerald-400" : ""
-                  }`}
-                >
-                  <div
-                    className="grid gap-2 px-3 py-3.5 items-center"
-                    style={{ gridTemplateColumns: "20px 28px 24px 1fr 72px" }}
-                  >
-                    {/* 印 */}
-                    <div className="flex flex-col items-center justify-center">
-                      {pick ? (
-                        <>
-                          <span className={`text-[18px] leading-none ${PICK_STYLE[pick.symbol]?.text} ${PICK_STYLE[pick.symbol]?.weight}`}>
-                            {pick.symbol}
-                          </span>
-                          <span className="text-[8px] font-bold text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] leading-none mt-0.5">
-                            {pick.ev.toFixed(1)}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-[11px] text-[var(--kaiko-text-muted)]">—</span>
-                      )}
-                    </div>
-
-                    {/* 枠番 */}
-                    <div
-                      className={`w-6 h-6 rounded-md ${wakuStyle.bg} border ${wakuStyle.border} shadow-sm flex items-center justify-center text-[11px] font-black font-[family-name:var(--font-rajdhani)]`}
-                    >
-                      {entry.frame_number ?? "-"}
-                    </div>
-
-                    {/* 馬番 */}
-                    <span className="text-[13px] font-black text-[var(--kaiko-text-muted)] text-center font-[family-name:var(--font-rajdhani)] italic leading-none">
-                      {entry.horse_number ?? "-"}
-                    </span>
-
-                    {/* 馬名・騎手 */}
-                    <div className="min-w-0">
-                      {horseHref ? (
-                        <Link href={horseHref} className="font-bold text-[14px] text-[var(--kaiko-text-main)] leading-tight truncate block hover:text-[var(--kaiko-primary)]">
-                          {entry.horse_name}
-                        </Link>
-                      ) : (
-                        <span className="font-bold text-[14px] text-[var(--kaiko-text-main)] leading-tight truncate block">
-                          {entry.horse_name}
-                        </span>
-                      )}
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        {entry.jockey && (
-                          <span className="text-[10px] text-[var(--kaiko-text-sub)] font-[family-name:var(--font-rajdhani)] font-bold">
-                            {entry.jockey}
-                          </span>
-                        )}
-                        {entry.weight_carried && (
-                          <span className="text-[10px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)]">
-                            {entry.weight_carried}kg
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {isValueBet && vbDetail && (
-                          <details className="w-full">
-                            <summary className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-300 text-amber-700 cursor-pointer list-none select-none">
-                              <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                              逆張り買い
-                              <span className="material-symbols-outlined text-[9px] ml-0.5">expand_more</span>
-                            </summary>
-                            <div className="mt-1.5 text-[10px] bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2 space-y-1">
-                              <p className="text-amber-800 font-bold text-[9px] mb-1.5">能力の割に人気がない馬</p>
-                              <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                                <div className="text-amber-700">能力推定ランク</div>
-                                <div className="font-black text-amber-900">{vbDetail.abilityRank}位</div>
-                                <div className="text-amber-700">現在人気</div>
-                                <div className="font-black text-amber-900">{vbDetail.oddsRank}番人気</div>
-                                <div className="text-amber-700">補正スコア平均</div>
-                                <div className="font-black text-amber-900">{vbDetail.avgScore}</div>
-                                <div className="text-amber-700">分析走数</div>
-                                <div className="font-black text-amber-900">{vbDetail.racesAnalyzed}走</div>
-                              </div>
-                              <p className="text-[9px] text-amber-600 mt-1.5 leading-snug">
-                                補正スコア＝着順−能力補正値。小さいほど強い。
-                              </p>
-                            </div>
-                          </details>
-                        )}
-                        {isCandidate && (
-                          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--kaiko-eval-positive-bg)] border border-emerald-200 text-[var(--kaiko-eval-positive-text)]">
-                            <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>trending_up</span>
-                            次走買い候補
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* オッズ・近3走 */}
-                    <div className="flex flex-col items-end gap-1.5">
-                      {entry.odds !== null ? (
-                        <div className="flex items-baseline gap-0.5">
-                          <span className={`text-[18px] font-black leading-none font-[family-name:var(--font-rajdhani)] ${
-                            (entry.popularity ?? 99) <= 3
-                              ? "text-[var(--kaiko-primary)]"
-                              : "text-[var(--kaiko-text-sub)]"
-                          }`}>
-                            {entry.odds.toFixed(1)}
-                          </span>
-                          <span className={`text-[10px] font-bold leading-none ${
-                            (entry.popularity ?? 99) <= 3
-                              ? "text-[var(--kaiko-primary)]"
-                              : "text-[var(--kaiko-text-sub)]"
-                          }`}>倍</span>
-                        </div>
-                      ) : (
-                        <span className="text-[13px] font-bold text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)]">—</span>
-                      )}
-
-                      <div className="flex items-center gap-0.5">
-                        {entry.popularity !== null && (
-                          <span className={`font-[family-name:var(--font-rajdhani)] text-[9px] font-black text-white px-1 rounded leading-none py-0.5 mr-1 ${
-                            entry.popularity <= 3 ? "bg-amber-500" : "bg-gray-400"
-                          }`}>
-                            {entry.popularity}人気
-                          </span>
-                        )}
-                        {/* 近3走ミニバッジ */}
-                        <div className="flex gap-0.5">
-                          {entry.recentPerfs.length > 0
-                            ? entry.recentPerfs.map((p, i) => (
-                                <EvalMiniBadge key={i} perf={p} />
-                              ))
-                            : <span className="text-[9px] text-[var(--kaiko-text-muted)]">—</span>
-                          }
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </section>
+        <EntryList
+          entriesWithForm={entriesWithForm}
+          valueBetMap={valueBetArr}
+          picksMap={picksArr}
+        />
 
         {/* 次走買い候補サマリー */}
         {buyCandidates.length > 0 && (

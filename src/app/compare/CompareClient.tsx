@@ -2,10 +2,24 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
 import type { Horse, HorsePerformance, Race } from "@/lib/database.types";
 import BottomNav from "@/components/BottomNav";
+
+function BackButtonClient() {
+  const router = useRouter();
+  return (
+    <button
+      onClick={() => router.back()}
+      className="w-8 h-8 flex items-center justify-center active:opacity-60"
+    >
+      <span className="material-symbols-outlined text-[var(--kaiko-on-surface-variant)] text-[24px]">
+        arrow_back
+      </span>
+    </button>
+  );
+}
 
 // 補正項目（DBカラム準拠）
 const CORRECTION_ITEMS: { key: keyof HorsePerformance; label: string }[] = [
@@ -227,6 +241,34 @@ const EVAL_DOT: Record<string, string> = {
   disregard: "bg-gray-300",
 };
 
+// レース一覧から「年月 → 週 → レース」への絞り込みロジック
+
+function getYearMonth(dateStr: string): string {
+  return dateStr.slice(0, 7); // "YYYY-MM"
+}
+
+function getWeekLabel(dateStr: string): string {
+  const d = new Date(dateStr);
+  const day = d.getDay(); // 0=日, 6=土
+  // その週の土曜を基準とする
+  const diffToSat = day === 0 ? -1 : 6 - day;
+  const sat = new Date(d);
+  sat.setDate(d.getDate() + diffToSat);
+  const sun = new Date(sat);
+  sun.setDate(sat.getDate() + 1);
+  const fmt = (dt: Date) => `${String(dt.getMonth() + 1).padStart(2, "0")}/${String(dt.getDate()).padStart(2, "0")}`;
+  return `${fmt(sat)}〜${fmt(sun)}`;
+}
+
+function getWeekKey(dateStr: string): string {
+  const d = new Date(dateStr);
+  const day = d.getDay();
+  const diffToSat = day === 0 ? -1 : 6 - day;
+  const sat = new Date(d);
+  sat.setDate(d.getDate() + diffToSat);
+  return `${sat.getFullYear()}-${String(sat.getMonth() + 1).padStart(2, "0")}-${String(sat.getDate()).padStart(2, "0")}`;
+}
+
 // 馬選択モーダル
 function HorseSelectModal({
   onSelect,
@@ -238,6 +280,9 @@ function HorseSelectModal({
   const [tab, setTab] = useState<"race" | "name">("race");
 
   const [races, setRaces] = useState<Race[]>([]);
+  // 絞り込みステップ: null=年月選択, "YYYY-MM"=週選択, "YYYY-MM-DD"=レース選択, race=馬選択
+  const [selectedYearMonth, setSelectedYearMonth] = useState<string | null>(null);
+  const [selectedWeekKey, setSelectedWeekKey] = useState<string | null>(null);
   const [selectedRace, setSelectedRace] = useState<Race | null>(null);
   const [raceHorses, setRaceHorses] = useState<{ horse: Horse; finish_order: number; eval_tag: string }[]>([]);
   const [raceLoading, setRaceLoading] = useState(false);
@@ -249,9 +294,34 @@ function HorseSelectModal({
       .select("race_id,race_name,race_date,track,grade,race_number")
       .not("race_date", "is", null)
       .order("race_date", { ascending: false })
-      .limit(60)
       .then(({ data }) => setRaces((data ?? []) as Race[]));
   }, []);
+
+  // 年月リスト（降順・重複なし）
+  const yearMonths = useMemo(() => {
+    const set = new Set(races.map((r) => getYearMonth(r.race_date)));
+    return Array.from(set).sort((a, b) => b.localeCompare(a));
+  }, [races]);
+
+  // 選択された年月内の週リスト
+  const weeksInMonth = useMemo(() => {
+    if (!selectedYearMonth) return [];
+    const inMonth = races.filter((r) => getYearMonth(r.race_date) === selectedYearMonth);
+    const map = new Map<string, string>(); // weekKey → label
+    for (const r of inMonth) {
+      const key = getWeekKey(r.race_date);
+      if (!map.has(key)) map.set(key, getWeekLabel(r.race_date));
+    }
+    return Array.from(map.entries())
+      .map(([key, label]) => ({ key, label }))
+      .sort((a, b) => b.key.localeCompare(a.key));
+  }, [races, selectedYearMonth]);
+
+  // 選択された週内のレース
+  const racesInWeek = useMemo(() => {
+    if (!selectedWeekKey) return [];
+    return races.filter((r) => getWeekKey(r.race_date) === selectedWeekKey);
+  }, [races, selectedWeekKey]);
 
   useEffect(() => {
     if (!selectedRace) return;
@@ -273,6 +343,9 @@ function HorseSelectModal({
         setRaceLoading(false);
       });
   }, [selectedRace]);
+
+  // パンくずのステップ判定
+  const step = selectedRace ? "horses" : selectedWeekKey ? "races" : selectedYearMonth ? "weeks" : "months";
 
   const [allHorses, setAllHorses] = useState<Horse[]>([]);
   const [query, setQuery] = useState("");
@@ -305,13 +378,17 @@ function HorseSelectModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center px-4 py-3 border-b border-[var(--kaiko-border)]">
-          {tab === "race" && selectedRace ? (
+          {tab === "race" && step !== "months" ? (
             <button
-              onClick={() => { setSelectedRace(null); setRaceHorses([]); }}
+              onClick={() => {
+                if (step === "horses") { setSelectedRace(null); setRaceHorses([]); }
+                else if (step === "races") setSelectedWeekKey(null);
+                else if (step === "weeks") setSelectedYearMonth(null);
+              }}
               className="flex items-center gap-1 text-sm font-bold text-[var(--kaiko-primary)]"
             >
               <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-              レース一覧
+              {step === "horses" ? "レース一覧" : step === "races" ? "週を選択" : "年月を選択"}
             </button>
           ) : (
             <h3 className="font-bold text-[var(--kaiko-text-main)]">馬を選択</h3>
@@ -339,33 +416,107 @@ function HorseSelectModal({
 
         {tab === "race" && (
           <div className="overflow-y-auto flex-1">
-            {!selectedRace ? (
-              races.map((race) => (
-                <button
-                  key={race.race_id}
-                  onClick={() => setSelectedRace(race)}
-                  className="w-full flex items-center gap-3 px-4 py-3 border-b border-[var(--kaiko-border)] hover:bg-gray-50 text-left"
-                >
-                  <div className="flex-shrink-0 text-center">
-                    <span className="text-[11px] font-bold text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] block">
-                      {race.race_date ? race.race_date.slice(2).replace(/-/g, "/") : "—"}
+            {/* Step 1: 年月選択 */}
+            {step === "months" && (
+              <>
+                <div className="px-4 py-2 bg-gray-50 border-b border-[var(--kaiko-border)]">
+                  <p className="text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase font-[family-name:var(--font-rajdhani)] tracking-wider">年月を選択</p>
+                </div>
+                {races.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-[var(--kaiko-text-muted)]">読み込み中...</p>
+                ) : (
+                  yearMonths.map((ym) => {
+                    const [year, month] = ym.split("-");
+                    const count = races.filter((r) => getYearMonth(r.race_date) === ym).length;
+                    return (
+                      <button
+                        key={ym}
+                        onClick={() => setSelectedYearMonth(ym)}
+                        className="w-full flex items-center justify-between px-4 py-3.5 border-b border-[var(--kaiko-border)] hover:bg-gray-50 text-left"
+                      >
+                        <span className="text-sm font-bold text-[var(--kaiko-text-main)]">
+                          {year}年 {parseInt(month)}月
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)]">
+                            {count} races
+                          </span>
+                          <span className="material-symbols-outlined text-[16px] text-[var(--kaiko-text-muted)]">chevron_right</span>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </>
+            )}
+
+            {/* Step 2: 週選択 */}
+            {step === "weeks" && selectedYearMonth && (
+              <>
+                <div className="px-4 py-2 bg-gray-50 border-b border-[var(--kaiko-border)]">
+                  <p className="text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase font-[family-name:var(--font-rajdhani)] tracking-wider">
+                    週を選択 — {selectedYearMonth.replace("-", "年")}月
+                  </p>
+                </div>
+                {weeksInMonth.map(({ key, label }) => {
+                  const count = races.filter((r) => getWeekKey(r.race_date) === key).length;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setSelectedWeekKey(key)}
+                      className="w-full flex items-center justify-between px-4 py-3.5 border-b border-[var(--kaiko-border)] hover:bg-gray-50 text-left"
+                    >
+                      <span className="text-sm font-bold text-[var(--kaiko-text-main)]">{label}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)]">
+                          {count} races
+                        </span>
+                        <span className="material-symbols-outlined text-[16px] text-[var(--kaiko-text-muted)]">chevron_right</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </>
+            )}
+
+            {/* Step 3: レース選択 */}
+            {step === "races" && selectedWeekKey && (
+              <>
+                <div className="px-4 py-2 bg-gray-50 border-b border-[var(--kaiko-border)]">
+                  <p className="text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase font-[family-name:var(--font-rajdhani)] tracking-wider">
+                    レースを選択 — {getWeekLabel(selectedWeekKey + "-01")}
+                  </p>
+                </div>
+                {racesInWeek.map((race) => (
+                  <button
+                    key={race.race_id}
+                    onClick={() => setSelectedRace(race)}
+                    className="w-full flex items-center gap-3 px-4 py-3 border-b border-[var(--kaiko-border)] hover:bg-gray-50 text-left"
+                  >
+                    <div className="flex-shrink-0 text-center min-w-[40px]">
+                      <span className="text-[11px] font-bold text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] block">
+                        {race.race_date ? race.race_date.slice(5).replace("-", "/") : "—"}
+                      </span>
+                      <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)]">{race.track}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-bold text-[var(--kaiko-text-main)] truncate block">
+                        {race.race_name}
+                      </span>
+                      <span className="text-[11px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] font-bold">
+                        {race.grade} · R{race.race_number}
+                      </span>
+                    </div>
+                    <span className="material-symbols-outlined text-[16px] text-[var(--kaiko-text-muted)] flex-shrink-0">
+                      chevron_right
                     </span>
-                    <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)]">{race.track}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm font-bold text-[var(--kaiko-text-main)] truncate block">
-                      {race.race_name}
-                    </span>
-                    <span className="text-[11px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] font-bold">
-                      R{race.race_number}
-                    </span>
-                  </div>
-                  <span className="material-symbols-outlined text-[16px] text-[var(--kaiko-text-muted)] flex-shrink-0">
-                    chevron_right
-                  </span>
-                </button>
-              ))
-            ) : (
+                  </button>
+                ))}
+              </>
+            )}
+
+            {/* Step 4: 馬選択 */}
+            {step === "horses" && selectedRace && (
               <>
                 <div className="px-4 py-2 bg-gray-50 border-b border-[var(--kaiko-border)]">
                   <p className="text-[11px] font-bold text-[var(--kaiko-text-muted)]">
@@ -605,11 +756,7 @@ export default function CompareClient() {
       {/* ヘッダー */}
       <header className="sticky top-0 z-40 bg-white border-b border-gray-100 flex justify-between items-center w-full px-4 h-16">
         <div className="flex items-center gap-3">
-          <Link href="/races">
-            <span className="material-symbols-outlined text-[var(--kaiko-on-surface-variant)] cursor-pointer">
-              arrow_back
-            </span>
-          </Link>
+          <BackButtonClient />
           <h1 className="text-base font-bold text-[var(--kaiko-on-surface)]">能力比較</h1>
         </div>
         <div className="flex items-center gap-1">

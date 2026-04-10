@@ -9,7 +9,36 @@ type PickPerf = HorsePerformance & {
   races: Pick<Race, "race_id" | "race_name" | "race_date" | "track" | "grade" | "surface" | "distance">;
 };
 
+async function getUpcomingHorseIds(): Promise<Set<number>> {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    // 今日以降のupcoming_racesに出走予定の馬IDを取得
+    const { data: upcomingRaces } = await (supabase as any)
+      .from("upcoming_races")
+      .select("race_id")
+      .gte("race_date", today);
+
+    if (!upcomingRaces || upcomingRaces.length === 0) return new Set();
+
+    const raceIds = (upcomingRaces as { race_id: string }[]).map((r) => r.race_id);
+
+    const { data: entries } = await (supabase as any)
+      .from("upcoming_entries")
+      .select("horse_id")
+      .in("race_id", raceIds)
+      .not("horse_id", "is", null);
+
+    if (!entries) return new Set();
+    return new Set((entries as { horse_id: number }[]).map((e) => e.horse_id));
+  } catch {
+    return new Set();
+  }
+}
+
 async function getPicks(): Promise<PickPerf[]> {
+  // 未来レースに出走予定の馬IDを取得
+  const upcomingHorseIds = await getUpcomingHorseIds();
+
   const { data, error } = await supabase
     .from("horse_performances")
     .select(`
@@ -25,6 +54,8 @@ async function getPicks(): Promise<PickPerf[]> {
 
   return (data as PickPerf[])
     .filter((p) => {
+      // 未来レースに出走予定の馬のみに絞り込む
+      if (upcomingHorseIds.size > 0 && !upcomingHorseIds.has(p.horses.horse_id)) return false;
       const v = calcAptitudeValue(p) + calcLossValue(p);
       return v >= 1.0;
     })
@@ -68,7 +99,7 @@ export default async function PicksPage() {
         </div>
         <div className="ml-3 flex items-center gap-1.5">
           <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-[18px]">tips_and_updates</span>
-          <span className="text-[13px] font-black text-[var(--kaiko-text-main)] tracking-tight">逆張り買い候補</span>
+          <span className="text-[13px] font-black text-[var(--kaiko-text-main)] tracking-tight">注目馬（次走出走予定）</span>
         </div>
         <span className="ml-auto font-[family-name:var(--font-rajdhani)] text-[11px] font-bold text-[var(--kaiko-text-muted)] uppercase tracking-wider">
           {picks.length} horses
@@ -79,7 +110,10 @@ export default async function PicksPage() {
         {picks.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 gap-3 text-[var(--kaiko-text-muted)]">
             <span className="material-symbols-outlined text-[48px]">search_off</span>
-            <p className="text-sm font-bold">候補馬がありません</p>
+            <p className="text-sm font-bold">次走出走予定の候補馬がいません</p>
+            <p className="text-[11px] text-center leading-relaxed">
+              直近の未来レースに登録された馬の中で<br />実力以下の評価馬を表示します
+            </p>
           </div>
         ) : (
           <>

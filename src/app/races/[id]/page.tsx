@@ -3,6 +3,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import type { RaceWithPerformances } from "@/lib/database.types";
 import BottomNav from "@/components/BottomNav";
+import BackButton from "@/components/BackButton";
 import HorseRow from "./HorseRow";
 
 interface Props {
@@ -99,12 +100,7 @@ export default async function RaceDetailPage({ params }: Props) {
       {/* ヘッダー */}
       <header className="fixed top-0 left-0 w-full z-50 flex items-center px-4 h-14 bg-white border-b border-[var(--kaiko-border)] shadow-sm">
         <div className="flex items-center w-full gap-3">
-          <Link
-            href="/races"
-            className="w-8 h-8 rounded-lg border border-[var(--kaiko-border)] bg-white flex items-center justify-center active:scale-95 duration-150"
-          >
-            <span className="material-symbols-outlined text-[var(--kaiko-text-main)] text-[18px] font-bold">arrow_back_ios_new</span>
-          </Link>
+          <BackButton />
           <div className="flex items-baseline gap-0.5">
             <span className="text-xl font-[family-name:var(--font-noto-sans-jp)] font-black tracking-tighter">回顧</span>
             <span className="text-xl font-[family-name:var(--font-noto-sans-jp)] font-black text-[var(--kaiko-primary)] italic">AI</span>
