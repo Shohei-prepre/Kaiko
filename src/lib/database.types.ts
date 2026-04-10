@@ -146,7 +146,7 @@ export interface UpcomingEntryWithForm extends UpcomingEntry {
 
 /** 近走の実力以下が 2走以上 → 次走買い候補 */
 export function isBuyCandidate(recentPerfs: RecentPerf[]): boolean {
-  const valid = recentPerfs.filter((p) => p.eval_tag !== "disregard");
+  const valid = recentPerfs.filter((p) => p.eval_tag !== "disregard" && p.eval_tag !== "above");
   return valid.filter((p) => p.eval_tag === "below").length >= 2;
 }
 
@@ -187,7 +187,7 @@ export function calcValueBetDetails(
   const withScore = entries
     .filter((e) => e.horse_id !== null && e.odds !== null && e.popularity !== null)
     .map((e) => {
-      const valid = e.recentPerfs.filter((p) => p.eval_tag !== "disregard");
+      const valid = e.recentPerfs.filter((p) => p.eval_tag !== "disregard" && p.eval_tag !== "above");
       // 最低2走の非度外視データが必要（1走だけでは信頼性が低い）
       if (valid.length < 2) return null;
       const avg = valid.reduce((sum, p) => sum + calcCorrectedScore(p), 0) / valid.length;
@@ -253,7 +253,7 @@ export function calcHorsePicks(
   const eligible = entries
     .map((e) => {
       if (!e.horse_id || !e.odds) return null;
-      const valid = e.recentPerfs.filter((p) => p.eval_tag !== "disregard");
+      const valid = e.recentPerfs.filter((p) => p.eval_tag !== "disregard" && p.eval_tag !== "above");
       if (valid.length < 2) return null;
       const avg = valid.reduce((sum, p) => sum + calcCorrectedScore(p), 0) / valid.length;
       return { horse_id: e.horse_id, avg, odds: e.odds };
