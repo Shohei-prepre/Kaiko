@@ -204,6 +204,68 @@ if existing_race:
 - sources に新ソース「{source_label}」を追加する（重複しない場合のみ）
 - horse_performances は全出走馬分を出力する
 
+## 整形ルール（マージ時も全馬に必ず値を入れること）
+
+### STEP 1: レース全体の状況を先に確定する
+テキストから以下を読み取り、races フィールドに反映する。
+
+【ペース (pace / pace_level / pace_value / pace_summary)】
+- 「ハイペース」「スロー」「前残り」「差し有利」「上がりがかかった」などの表現から判定
+- pace: スロー / ミドル / ハイ
+- pace_summary: 具体的な展開記述
+- pace_value: ペースが有利/不利に働いた馬身換算の目安
+
+【トラックバイアス (track_bias_level / track_bias_value / track_bias_summary)】
+- 「内有利」「外有利」「差し有利」「前有利」などの表現から判定
+- track_bias_summary: 具体的なバイアス内容
+- track_bias_value: バイアスの大きさの馬身換算目安
+
+### STEP 2: 全馬の展開ポジションを確定する
+レース結果JSON の position_order（通過順）と枠番から各馬の展開を分類する。
+- 逃げ: 先頭または2番手で終始レース
+- 先行: 3〜5番手付近
+- 中団: 6〜10番手付近
+- 後方: それ以降
+- 内/外の判断: 枠番1〜4は内、5〜8は中、9〜18は外を基本とする
+
+### STEP 3: 全馬に pace_effect_value と track_condition_value（個別）を推定して入れる
+テキストで個別言及がない馬も、STEP1・STEP2 の情報から必ず推定値を入れること。null は禁止。
+
+【pace_effect_value の推定ルール】
+- ハイペース時: 逃げ・先行馬は +1.0〜+2.0（消耗分のハンデ）、差し・追込馬は -0.5〜-1.0（恩恵）
+- スローペース時: 逃げ・先行馬は -0.5〜-1.0（恩恵）、差し・追込馬は +0.5〜+1.0（不利）
+- ミドルペース: 全馬 0.0 を基本とし、テキストで言及があれば調整
+
+【track_condition_value（個別）の推定ルール】
+- 内有利バイアス: 内枠（1〜4枠）は -0.5（恩恵）、外枠（7〜9枠）は +0.5〜+1.0（不利）
+- 外有利バイアス: 逆の符号
+- バイアスなし（track_bias_level=null）: 全馬 0.0
+
+### STEP 4: 不利・出遅れは必ず trouble_value と trouble_summary に入れる
+- 出遅れ: 「1歩遅れ」→ trouble_value=0.3、「2歩遅れ」→ 0.5、「大きく出遅れ」→ 1.0〜1.5
+- 「何歩遅れ」という表現は trouble_summary にそのまま保持する（例: "2歩出遅れ"）
+- 進路妨害・接触・外に振られた等: 内容に応じて 0.3〜1.5
+- 大きな不利（落馬・競走中止）: trouble_value=3.0 以上、eval_tag=disregard
+- 不利の言及がない馬: trouble_value=0.0、trouble_summary=null
+
+### STEP 5: 気性・馬体重影響は言及があれば入れる
+- 「かかった」「折り合いを欠いた」→ temperament_value: 0.5〜1.5
+- 「馬体重増で太め残り」「絞れていた」→ weight_effect_value: 0.3〜1.0
+- 言及なし: 両方 0.0
+
+### 数値の基準
+- level: small=0.5馬身未満 / medium=0.5〜2馬身 / large=2馬身超
+- value の符号: プラス（+）＝その馬にとって不利・ハンデ、マイナス（-）＝有利・恩恵
+- pace_effect と track_condition は必ず数値を入れること（null 禁止）
+
+### その他
+- horse_performances は全出走馬分を着順順で出力
+- frame_number・horse_number はレース結果JSONのframe_number・umabanから取得
+- 中止・除外は finish_order=99
+- review_flag は confidence=low のみ true
+- JSONのみ返すこと
+"""
+
 ## 出力フォーマット
 
 {{
@@ -342,9 +404,61 @@ else:
   ]
 }}
 
-## 整形ルール
-- テキストから読み取れる馬身換算値は数値で。不明はnull
-- level: small=0.5馬身未満 / medium=0.5〜2馬身 / large=2馬身超 / 不明=null
+## 整形ルール（必ず全馬に値を入れること）
+
+### STEP 1: レース全体の状況を先に確定する
+テキストから以下を読み取り、races フィールドに反映する。
+
+【ペース (pace / pace_level / pace_value / pace_summary)】
+- 「ハイペース」「スロー」「前残り」「差し有利」「上がりがかかった」などの表現から判定
+- pace: スロー / ミドル / ハイ
+- pace_summary: 具体的な展開記述
+- pace_value: ペースが有利/不利に働いた馬身換算の目安
+
+【トラックバイアス (track_bias_level / track_bias_value / track_bias_summary)】
+- 「内有利」「外有利」「差し有利」「前有利」などの表現から判定
+- track_bias_summary: 具体的なバイアス内容
+- track_bias_value: バイアスの大きさの馬身換算目安
+
+### STEP 2: 全馬の展開ポジションを確定する
+レース結果JSON の position_order（通過順）と枠番から各馬の展開を分類する。
+- 逃げ: 先頭または2番手で終始レース
+- 先行: 3〜5番手付近
+- 中団: 6〜10番手付近
+- 後方: それ以降
+- 内/外の判断: 枠番1〜4は内、5〜8は中、9〜18は外を基本とする
+
+### STEP 3: 全馬に pace_effect_value と track_condition_value（個別）を推定して入れる
+テキストで個別言及がない馬も、STEP1・STEP2 の情報から必ず推定値を入れること。null は禁止。
+
+【pace_effect_value の推定ルール】
+- ハイペース時: 逃げ・先行馬は +1.0〜+2.0（消耗分のハンデ）、差し・追込馬は -0.5〜-1.0（恩恵）
+- スローペース時: 逃げ・先行馬は -0.5〜-1.0（恩恵）、差し・追込馬は +0.5〜+1.0（不利）
+- ミドルペース: 全馬 0.0 を基本とし、テキストで言及があれば調整
+
+【track_condition_value（個別）の推定ルール】
+- 内有利バイアス: 内枠（1〜4枠）は -0.5（恩恵）、外枠（7〜9枠）は +0.5〜+1.0（不利）
+- 外有利バイアス: 逆の符号
+- バイアスなし（track_bias_level=null）: 全馬 0.0
+
+### STEP 4: 不利・出遅れは必ず trouble_value と trouble_summary に入れる
+- 出遅れ: 「1歩遅れ」→ trouble_value=0.3、「2歩遅れ」→ 0.5、「大きく出遅れ」→ 1.0〜1.5
+- 「何歩遅れ」という表現は trouble_summary にそのまま保持する（例: "2歩出遅れ"）
+- 進路妨害・接触・外に振られた等: 内容に応じて 0.3〜1.5
+- 大きな不利（落馬・競走中止）: trouble_value=3.0 以上、eval_tag=disregard
+- 不利の言及がない馬: trouble_value=0.0、trouble_summary=null
+
+### STEP 5: 気性・馬体重影響は言及があれば入れる
+- 「かかった」「折り合いを欠いた」→ temperament_value: 0.5〜1.5
+- 「馬体重増で太め残り」「絞れていた」→ weight_effect_value: 0.3〜1.0
+- 言及なし: 両方 0.0
+
+### 数値の基準
+- level: small=0.5馬身未満 / medium=0.5〜2馬身 / large=2馬身超
+- value の符号: プラス（+）＝その馬にとって不利・ハンデ、マイナス（-）＝有利・恩恵
+- pace_effect と track_condition は必ず数値を入れること（null 禁止）
+
+### その他
 - horse_performances は全出走馬分を着順順で出力
 - frame_number・horse_number はレース結果JSONのframe_number・umabanから取得
 - 中止・除外は finish_order=99
