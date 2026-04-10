@@ -8,8 +8,8 @@ import type {
   RecentPerf,
   EvalTag,
 } from "@/lib/database.types";
-import { isBuyCandidate, calcValueBetDetails } from "@/lib/database.types";
-import type { ValueBetDetail } from "@/lib/database.types";
+import { isBuyCandidate, calcValueBetDetails, calcHorsePicks } from "@/lib/database.types";
+import type { ValueBetDetail, HorsePick } from "@/lib/database.types";
 import BottomNav from "@/components/BottomNav";
 
 interface Props {
@@ -185,6 +185,15 @@ const EVAL_MINI: Record<string, { bg: string; border: string; text: string }> = 
   disregard: { bg: "bg-[var(--kaiko-eval-disregard-bg)]", border: "border-gray-200",   text: "text-[var(--kaiko-text-muted)]" },
 };
 
+const PICK_STYLE: Record<string, { text: string; weight: string }> = {
+  "◎": { text: "text-red-600",    weight: "font-black" },
+  "○": { text: "text-blue-600",   weight: "font-black" },
+  "▲": { text: "text-gray-800",   weight: "font-black" },
+  "△": { text: "text-gray-500",   weight: "font-bold"  },
+  "★": { text: "text-amber-500",  weight: "font-black" },
+  "✓": { text: "text-gray-300",   weight: "font-bold"  },
+};
+
 function EvalMiniBadge({ perf }: { perf: RecentPerf }) {
   const tag = perf.eval_tag ?? "disregard";
   const s = EVAL_MINI[tag] ?? EVAL_MINI.disregard;
@@ -235,6 +244,7 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
 
   const buyCandidates = entriesWithForm.filter((e) => isBuyCandidate(e.recentPerfs));
   const valueBetMap = calcValueBetDetails(entriesWithForm);
+  const picksMap = calcHorsePicks(entriesWithForm, valueBetMap);
 
   const gradeBadge = GRADE_BADGE[race.grade] ?? GRADE_BADGE["OP"];
   const surfaceBadge = SURFACE_BADGE[race.surface] ?? SURFACE_BADGE["芝"];
@@ -340,12 +350,13 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
           {/* テーブルヘッダー */}
           <div
             className="grid gap-2 px-3 py-2.5 bg-gray-50 border-b border-[var(--kaiko-border)] items-center"
-            style={{ gridTemplateColumns: "28px 24px 1fr 72px" }}
+            style={{ gridTemplateColumns: "20px 28px 24px 1fr 72px" }}
           >
+            <span className="font-[family-name:var(--font-rajdhani)] text-[10px] font-black text-[var(--kaiko-text-muted)] text-center">印</span>
             <span className="font-[family-name:var(--font-rajdhani)] text-[10px] font-black text-[var(--kaiko-text-muted)] text-center">枠</span>
             <span className="font-[family-name:var(--font-rajdhani)] text-[10px] font-black text-[var(--kaiko-text-muted)] text-center">馬</span>
             <span className="font-[family-name:var(--font-rajdhani)] text-[10px] font-black text-[var(--kaiko-text-muted)]">馬名 / 騎手</span>
-            <span className="font-[family-name:var(--font-rajdhani)] text-[10px] font-black text-[var(--kaiko-text-muted)] text-right">単勝 / 近3走</span>
+            <span className="font-[family-name:var(--font-rajdhani)] text-[10px] font-black text-[var(--kaiko-text-muted)] text-right">単勝 / 近走</span>
           </div>
 
           {entriesWithForm.length === 0 ? (
@@ -357,6 +368,7 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
               const isCandidate = isBuyCandidate(entry.recentPerfs);
               const vbDetail: ValueBetDetail | undefined = entry.horse_id ? valueBetMap.get(entry.horse_id) : undefined;
               const isValueBet = vbDetail !== undefined;
+              const pick: HorsePick | undefined = entry.horse_id ? picksMap.get(entry.horse_id) : undefined;
               const waku = entry.frame_number ?? 1;
               const wakuStyle = WAKU_STYLES[Math.min(waku, 8)] ?? WAKU_STYLES[1];
               const horseHref = entry.horse_id ? `/horses/${entry.horse_id}` : undefined;
@@ -371,8 +383,24 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
                 >
                   <div
                     className="grid gap-2 px-3 py-3.5 items-center"
-                    style={{ gridTemplateColumns: "28px 24px 1fr 72px" }}
+                    style={{ gridTemplateColumns: "20px 28px 24px 1fr 72px" }}
                   >
+                    {/* 印 */}
+                    <div className="flex flex-col items-center justify-center">
+                      {pick ? (
+                        <>
+                          <span className={`text-[18px] leading-none ${PICK_STYLE[pick.symbol]?.text} ${PICK_STYLE[pick.symbol]?.weight}`}>
+                            {pick.symbol}
+                          </span>
+                          <span className="text-[8px] font-bold text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] leading-none mt-0.5">
+                            {pick.ev.toFixed(1)}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-[11px] text-[var(--kaiko-text-muted)]">—</span>
+                      )}
+                    </div>
+
                     {/* 枠番 */}
                     <div
                       className={`w-6 h-6 rounded-md ${wakuStyle.bg} border ${wakuStyle.border} shadow-sm flex items-center justify-center text-[11px] font-black font-[family-name:var(--font-rajdhani)]`}

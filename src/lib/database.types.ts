@@ -218,6 +218,96 @@ export function calcValueBetFlags(entries: UpcomingEntryWithForm[]): Set<number>
   return new Set(calcValueBetDetails(entries).keys());
 }
 
+// ────────── 期待値ベース推奨シンボル ──────────────────────────────────────────
+
+export type PickSymbol = "◎" | "○" | "▲" | "△" | "★" | "✓";
+
+export interface HorsePick {
+  symbol: PickSymbol;
+  /** 推定勝率（%）*/
+  winProb: number;
+  /** 期待値 = 推定勝率 × 単勝オッズ */
+  ev: number;
+}
+
+/**
+ * 出走馬ごとの推奨シンボルと期待値を計算する。
+ *
+ * - 過去2走以上の非度外視データがない馬は除外（Map に含めない）
+ * - 補正スコア平均をソフトマックス変換して勝率を推定
+ * - EV = 推定勝率 × 単勝オッズ で各馬をスコアリング
+ * - ◎○▲△：EV 降順上位 4 頭（各 1 頭）
+ * - ★：逆張り買いフラグ馬のうち EV 最高かつ ◎○▲△ 外の 1 頭
+ * - ✓：データあり・上記以外
+ *
+ * @param k ソフトマックス感度（大きいほどスコア差が確率差に強く出る）
+ */
+export function calcHorsePicks(
+  entries: UpcomingEntryWithForm[],
+  valueBetMap: Map<number, ValueBetDetail>,
+  k = 0.3
+): Map<number, HorsePick> {
+  const result = new Map<number, HorsePick>();
+
+  // 過去2走以上の非度外視データ + オッズがある馬のみ対象
+  const eligible = entries
+    .map((e) => {
+      if (!e.horse_id || !e.odds) return null;
+      const valid = e.recentPerfs.filter((p) => p.eval_tag !== "disregard");
+      if (valid.length < 2) return null;
+      const avg = valid.reduce((sum, p) => sum + calcCorrectedScore(p), 0) / valid.length;
+      return { horse_id: e.horse_id, avg, odds: e.odds };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+
+  if (eligible.length === 0) return result;
+
+  // ソフトマックス: スコアが低い（強い）ほど高い確率
+  const raws = eligible.map((h) => Math.exp(-h.avg * k));
+  const total = raws.reduce((a, b) => a + b, 0);
+
+  const evList = eligible.map((h, i) => {
+    const prob = raws[i] / total;
+    return { horse_id: h.horse_id, prob, ev: prob * h.odds };
+  });
+
+  // EV 降順にソート
+  const sorted = [...evList].sort((a, b) => b.ev - a.ev);
+
+  // ◎○▲△ を上位4頭に割り当て
+  const mainSymbols: PickSymbol[] = ["◎", "○", "▲", "△"];
+  const top4Ids = new Set<number>();
+  const symbolMap = new Map<number, PickSymbol>();
+
+  sorted.forEach((h, i) => {
+    if (i < 4) {
+      symbolMap.set(h.horse_id, mainSymbols[i]);
+      top4Ids.add(h.horse_id);
+    } else {
+      symbolMap.set(h.horse_id, "✓");
+    }
+  });
+
+  // ★: 逆張りフラグ馬のうち EV 最高かつ top4 外の 1 頭
+  const bestStar = sorted.find(
+    (h) => valueBetMap.has(h.horse_id) && !top4Ids.has(h.horse_id)
+  );
+  if (bestStar) {
+    symbolMap.set(bestStar.horse_id, "★");
+  }
+
+  // 結果 Map を組み立て
+  evList.forEach((h) => {
+    result.set(h.horse_id, {
+      symbol: symbolMap.get(h.horse_id)!,
+      winProb: Math.round(h.prob * 1000) / 10,
+      ev: Math.round(h.ev * 100) / 100,
+    });
+  });
+
+  return result;
+}
+
 export type Database = {
   public: {
     Tables: {
