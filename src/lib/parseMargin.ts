@@ -63,7 +63,7 @@ export function buildCumulativeMargins(
  * 返り値: Map<race_id, Map<horse_id, cumulative_margin>>（1着=0）
  */
 export function buildRaceMarginMaps(
-  perfs: { horse_id: number; race_id: string; finish_order: number; margin: number | null }[]
+  perfs: { horse_id: number; race_id: string; finish_order: number; margin: number | string | null }[]
 ): Map<string, Map<number, number>> {
   const byRace = new Map<string, typeof perfs>();
   for (const p of perfs) {
@@ -80,7 +80,7 @@ export function buildRaceMarginMaps(
         horseMap.set(p.horse_id, 0);
       } else {
         const m = p.margin;
-        cum += (m !== null && Number.isFinite(m)) ? m : 0;
+        cum += typeof m === 'string' ? parseMarginText(m) : (m !== null && Number.isFinite(m)) ? m : 0;
         horseMap.set(p.horse_id, cum);
       }
     }
