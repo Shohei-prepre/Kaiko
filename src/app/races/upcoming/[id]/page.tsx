@@ -13,12 +13,33 @@ import { getCourseCharacteristic } from "@/lib/courseCharacteristics";
 import BottomNav from "@/components/BottomNav";
 import BackButton from "@/components/BackButton";
 import EntryList from "./EntryList";
+import RaceNavBar from "./RaceNavBar";
 
 interface Props {
   params: Promise<{ id: string }>;
 }
 
 // ── データ取得 ──────────────────────────────────────────────────
+
+interface RaceNav {
+  race_id: string;
+  track: string;
+  race_number: number;
+}
+
+async function getRacesForDate(date: string): Promise<RaceNav[]> {
+  try {
+    const { data } = await supabase
+      .from("upcoming_races" as never)
+      .select("race_id, track, race_number")
+      .eq("race_date", date)
+      .order("track")
+      .order("race_number");
+    return (data ?? []) as RaceNav[];
+  } catch {
+    return [];
+  }
+}
 
 async function getUpcomingRace(id: string): Promise<UpcomingRace | null> {
   try {
@@ -213,9 +234,13 @@ const WAKU_STYLES: Record<number, { bg: string; border: string }> = {
 export default async function UpcomingRaceDetailPage({ params }: Props) {
   const { id } = await params;
 
-  const race = await getUpcomingRace(id);
+  const [race, ] = await Promise.all([getUpcomingRace(id)]);
   if (!race) notFound();
-  const entries = await getEntries(id, race.head_count);
+
+  const [entries, navRaces] = await Promise.all([
+    getEntries(id, race.head_count),
+    getRacesForDate(race.race_date),
+  ]);
 
   const unlinkedNames = entries
     .filter((e) => e.horse_id === null)
@@ -272,7 +297,14 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
         </div>
       </header>
 
-      <main className="pt-16 px-3 max-w-md mx-auto pb-28 space-y-3">
+      <RaceNavBar
+        races={navRaces}
+        currentRaceId={id}
+        currentTrack={race.track}
+        currentRaceNumber={race.race_number ?? 0}
+      />
+
+      <main className="pt-28 px-3 max-w-md mx-auto pb-28 space-y-3">
 
         {/* レース概要カード */}
         <section className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05),_0_1px_2px_rgba(0,0,0,0.1)] border border-[var(--kaiko-border)] overflow-hidden">
