@@ -165,7 +165,8 @@ export function calcCorrectedScore(perf: RecentPerf): number {
     (perf.weight_effect_value ?? 0) +
     (perf.track_condition_value ?? 0) +
     (perf.pace_effect_value ?? 0);
-  const base = perf.cumulative_margin ?? perf.finish_order;
+  const cm = perf.cumulative_margin;
+  const base = (cm !== null && cm !== undefined && Number.isFinite(cm)) ? cm : perf.finish_order;
   return base - ability;
 }
 

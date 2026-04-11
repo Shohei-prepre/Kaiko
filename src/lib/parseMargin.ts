@@ -79,7 +79,8 @@ export function buildRaceMarginMaps(
       if (p.finish_order === 1) {
         horseMap.set(p.horse_id, 0);
       } else {
-        cum += p.margin ?? 0;
+        const m = p.margin;
+        cum += (m !== null && Number.isFinite(m)) ? m : 0;
         horseMap.set(p.horse_id, cum);
       }
     }

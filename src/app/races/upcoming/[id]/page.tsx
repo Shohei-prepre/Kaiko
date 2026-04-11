@@ -146,16 +146,31 @@ async function getRecentPerfsForHorses(
       races: { race_name: string; race_date: string } | null;
     };
 
-    const rawPerfs = (data as RawPerf[]).filter((r) => r.races);
+    // まず馬ごとに直近5走に絞る（全走から race_ids を収集すると膨大になるため）
+    const byHorse = new Map<number, RawPerf[]>();
+    for (const row of (data as RawPerf[]).filter((r) => r.races)) {
+      if (!byHorse.has(row.horse_id)) byHorse.set(row.horse_id, []);
+      byHorse.get(row.horse_id)!.push(row);
+    }
+    const slicedByHorse = new Map<number, RawPerf[]>();
+    for (const [hid, perfs] of byHorse.entries()) {
+      slicedByHorse.set(
+        hid,
+        perfs.sort((a, b) => b.races!.race_date.localeCompare(a.races!.race_date)).slice(0, 5)
+      );
+    }
 
-    // 累積着差マップ構築：全馬データが必要なので race_id で別途取得
-    const uniqueRaceIds = [...new Set(rawPerfs.map((p) => p.race_id))];
+    // 直近5走の race_id だけで累積着差マップを構築
+    const uniqueRaceIds = [...new Set(
+      [...slicedByHorse.values()].flat().map((p) => p.race_id)
+    )];
     let raceMarginMaps = new Map<string, Map<number, number>>();
     if (uniqueRaceIds.length > 0) {
-      const { data: allMargins } = await supabase
+      const { data: allMargins } = await (supabase as any)
         .from("horse_performances")
         .select("horse_id, race_id, finish_order, margin")
-        .in("race_id", uniqueRaceIds);
+        .in("race_id", uniqueRaceIds)
+        .limit(10000);
       if (allMargins) {
         raceMarginMaps = buildRaceMarginMaps(
           allMargins as { horse_id: number; race_id: string; finish_order: number; margin: number | null }[]
@@ -163,17 +178,7 @@ async function getRecentPerfsForHorses(
       }
     }
 
-    const byHorse = new Map<number, RawPerf[]>();
-    for (const row of rawPerfs) {
-      if (!byHorse.has(row.horse_id)) byHorse.set(row.horse_id, []);
-      byHorse.get(row.horse_id)!.push(row);
-    }
-
-    for (const [hid, perfs] of byHorse.entries()) {
-      const sorted = perfs
-        .sort((a, b) => b.races!.race_date.localeCompare(a.races!.race_date))
-        .slice(0, 5);
-
+    for (const [hid, sorted] of slicedByHorse.entries()) {
       // 脚質推定（disregard 除外、直近5走の position_order を使用）
       const validPositions = sorted
         .filter((p) => p.eval_tag !== "disregard")
@@ -183,20 +188,23 @@ async function getRecentPerfsForHorses(
 
       perfsMap.set(
         hid,
-        sorted.map((p) => ({
-          race_name: p.races!.race_name,
-          race_date: p.races!.race_date,
-          race_id: p.race_id,
-          finish_order: p.finish_order,
-          margin: p.margin,
-          cumulative_margin: raceMarginMaps.get(p.race_id)?.get(p.horse_id) ?? null,
-          eval_tag: p.eval_tag,
-          trouble_value: p.trouble_value,
-          temperament_value: p.temperament_value,
-          weight_effect_value: p.weight_effect_value,
-          track_condition_value: p.track_condition_value,
-          pace_effect_value: p.pace_effect_value,
-        }))
+        sorted.map((p) => {
+          const cm = raceMarginMaps.get(p.race_id)?.get(p.horse_id);
+          return {
+            race_name: p.races!.race_name,
+            race_date: p.races!.race_date,
+            race_id: p.race_id,
+            finish_order: p.finish_order,
+            margin: p.margin,
+            cumulative_margin: (cm !== undefined && Number.isFinite(cm)) ? cm : null,
+            eval_tag: p.eval_tag,
+            trouble_value: p.trouble_value,
+            temperament_value: p.temperament_value,
+            weight_effect_value: p.weight_effect_value,
+            track_condition_value: p.track_condition_value,
+            pace_effect_value: p.pace_effect_value,
+          };
+        })
       );
     }
   } catch {

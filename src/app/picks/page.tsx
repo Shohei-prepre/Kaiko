@@ -133,50 +133,60 @@ async function fetchPicksData(): Promise<RaceWithPicks[]> {
         races: { race_name: string; race_date: string } | null;
       };
 
-      const rawPerfs = (perfs ?? []) as RawPerf[];
-
-      // 累積着差マップ構築：全馬の finish_order+margin が必要なので race_id で別途取得
-      const uniqueRaceIds = [...new Set(rawPerfs.filter((p) => p.races).map((p) => p.race_id))];
-      let raceMarginMaps = new Map<string, Map<number, number>>();
-      if (uniqueRaceIds.length > 0) {
-        const { data: allMargins } = await supabase
-          .from("horse_performances")
-          .select("horse_id, race_id, finish_order, margin")
-          .in("race_id", uniqueRaceIds);
-        if (allMargins) {
-          raceMarginMaps = buildRaceMarginMaps(
-            allMargins as { horse_id: number; race_id: string; finish_order: number; margin: number | null }[]
-          );
-        }
-      }
-
+      // まず馬ごとに直近5走に絞る（全走から race_ids を収集すると膨大になるため）
       const byHorse = new Map<number, RawPerf[]>();
-      for (const row of rawPerfs) {
+      for (const row of (perfs ?? []) as RawPerf[]) {
         if (!row.races) continue;
         if (!byHorse.has(row.horse_id)) byHorse.set(row.horse_id, []);
         byHorse.get(row.horse_id)!.push(row);
       }
-
+      const slicedByHorse = new Map<number, RawPerf[]>();
       for (const [hid, ps] of byHorse.entries()) {
+        slicedByHorse.set(
+          hid,
+          ps.sort((a, b) => b.races!.race_date.localeCompare(a.races!.race_date)).slice(0, 5)
+        );
+      }
+
+      // 直近5走の race_id だけで累積着差マップを構築（全走は不要）
+      const uniqueRaceIds = [...new Set(
+        [...slicedByHorse.values()].flat().map((p) => p.race_id)
+      )];
+      let raceMarginMaps = new Map<string, Map<number, number>>();
+      if (uniqueRaceIds.length > 0) {
+        const { data: allMargins } = await (supabase as any)
+          .from("horse_performances")
+          .select("horse_id, race_id, finish_order, margin")
+          .in("race_id", uniqueRaceIds)
+          .limit(20000);
+        if (allMargins) {
+          raceMarginMaps = buildRaceMarginMaps(
+            (allMargins as { horse_id: number; race_id: string; finish_order: number; margin: number | null }[])
+          );
+        }
+      }
+
+      for (const [hid, ps] of slicedByHorse.entries()) {
         recentPerfsMap.set(
           hid,
-          ps
-            .sort((a, b) => b.races!.race_date.localeCompare(a.races!.race_date))
-            .slice(0, 5)
-            .map((p) => ({
+          ps.map((p) => {
+            const cm = raceMarginMaps.get(p.race_id)?.get(p.horse_id);
+            return {
               race_name: p.races!.race_name,
               race_date: p.races!.race_date,
               race_id: p.race_id,
               finish_order: p.finish_order,
               margin: p.margin,
-              cumulative_margin: raceMarginMaps.get(p.race_id)?.get(p.horse_id) ?? null,
+              // NaN になりえる値は null 扱いしてフォールバック
+              cumulative_margin: (cm !== undefined && Number.isFinite(cm)) ? cm : null,
               eval_tag: p.eval_tag,
               trouble_value: p.trouble_value,
               temperament_value: p.temperament_value,
               weight_effect_value: p.weight_effect_value,
               track_condition_value: p.track_condition_value,
               pace_effect_value: p.pace_effect_value,
-            }))
+            };
+          })
         );
       }
     }
