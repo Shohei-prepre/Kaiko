@@ -267,35 +267,30 @@ export interface HorsePick {
 /**
  * 出走馬ごとの推奨シンボルと期待値を計算する。
  *
- * 【確率推定の考え方】
- * - 推定勝率 = 能力スコア確率（ソフトマックス）× (1-marketWeight)
- *            + 市場確率（1/オッズの正規化）× marketWeight のブレンド
- * - marketWeight=0 → 純能力評価、marketWeight=1 → 純オッズ市場追従
- * - eligible が全出走頭数より少ない場合は (eligible数 / 全頭数) に圧縮し
- *   過大評価を防ぐ
+ * 【シンボル割り当て】
+ * valueScore = (人気順 - 能力順) / 能力順 でランク付け。
+ * 能力順 < 人気順（能力の割に人気がない）の馬のみ対象。
+ * 同じギャップ幅でも能力が高いほど高スコアになるため、
+ * 元々能力が低い馬は過大評価されにくい。
+ * - ◎○▲△：valueScore 上位4頭（gap > 0 の馬のみ）
+ * - ✓：データあり・バリュー外（能力順 ≥ 人気順）
  *
- * 【EVの意味】
- * - EV = 推定勝率 × 単勝オッズ
- * - EV > 1.0 なら「理論上プラス収支」の馬
- * - 印は EV 降順で ◎○▲△ を割り当て
- * - ★：逆張りフラグ馬のうち EV 最高かつ ◎○▲△ 外の 1 頭
- * - ✓：データあり・上記以外
- *
- * @param k            ソフトマックス感度（大きいほどスコア差が確率差に強く出る）
- * @param marketWeight 市場オッズへの重み 0〜1（0=純能力、1=純市場）
+ * 【EV・winProb】
+ * 能力スコアと市場確率（1/オッズ）のブレンドで推定勝率を計算。
+ * シンボル割り当てには使わず表示用として残す。
  */
 export function calcHorsePicks(
   entries: UpcomingEntryWithForm[],
-  valueBetMap: Map<number, ValueBetDetail>,
+  _valueBetMap: Map<number, ValueBetDetail>,
   k = 0.3,
-  marketWeight = 0.75  // ← ここを変えて人気 vs 能力のバランスを調整
+  marketWeight = 0.75
 ): Map<number, HorsePick> {
   const result = new Map<number, HorsePick>();
 
   const totalEntries = entries.length;
   if (totalEntries === 0) return result;
 
-  // 過去1走以上の非度外視データ + オッズがある馬のみ対象
+  // ── EV 計算（winProb / ev の表示用）──────────────────────────────
   const eligible = entries
     .map((e) => {
       if (!e.horse_id || !e.odds) return null;
@@ -306,64 +301,57 @@ export function calcHorsePicks(
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
 
-  // eligible が0頭なら印なし
-  if (eligible.length < 1) return result;
-
-  // ── 能力確率: ソフトマックス（補正スコアが低いほど強い）──────────
-  const abilityRaws = eligible.map((h) => Math.exp(-h.avg * k));
-  const abilityTotal = abilityRaws.reduce((a, b) => a + b, 0);
-
-  // ── 市場確率: オッズの逆数（eligible内で正規化）──────────────────
-  // 低オッズ（人気馬）ほど高い確率になる
-  const marketRaws = eligible.map((h) => 1 / h.odds);
-  const marketTotal = marketRaws.reduce((a, b) => a + b, 0);
-
-  // eligible 全体に割り当てる確率シェア = eligible数 / 全頭数
-  const eligibleShare = eligible.length / totalEntries;
-
-  const evList = eligible.map((h, i) => {
-    const abilityProb = abilityRaws[i] / abilityTotal;
-    const marketProb  = marketRaws[i]  / marketTotal;
-    // ブレンド: marketWeight で人気側と能力側のバランスを取る
-    const blended = (1 - marketWeight) * abilityProb + marketWeight * marketProb;
-    const prob = blended * eligibleShare;
-    const ev   = prob * h.odds;
-    return { horse_id: h.horse_id, prob, ev };
-  });
-
-  // EV 降順にソート
-  const sorted = [...evList].sort((a, b) => b.ev - a.ev);
-
-  // ◎○▲△ を上位4頭に割り当て
-  const mainSymbols: PickSymbol[] = ["◎", "○", "▲", "△"];
-  const top4Ids = new Set<number>();
-  const symbolMap = new Map<number, PickSymbol>();
-
-  sorted.forEach((h, i) => {
-    if (i < 4) {
-      symbolMap.set(h.horse_id, mainSymbols[i]);
-      top4Ids.add(h.horse_id);
-    } else {
-      symbolMap.set(h.horse_id, "✓");
-    }
-  });
-
-  // ★: 逆張りフラグ馬のうち EV 最高かつ top4 外の 1 頭
-  const bestStar = sorted.find(
-    (h) => valueBetMap.has(h.horse_id) && !top4Ids.has(h.horse_id)
-  );
-  if (bestStar) {
-    symbolMap.set(bestStar.horse_id, "★");
+  const evMap = new Map<number, { winProb: number; ev: number }>();
+  if (eligible.length > 0) {
+    const abilityRaws = eligible.map((h) => Math.exp(-h.avg * k));
+    const abilityTotal = abilityRaws.reduce((a, b) => a + b, 0);
+    const marketRaws = eligible.map((h) => 1 / h.odds);
+    const marketTotal = marketRaws.reduce((a, b) => a + b, 0);
+    const eligibleShare = eligible.length / totalEntries;
+    eligible.forEach((h, i) => {
+      const abilityProb = abilityRaws[i] / abilityTotal;
+      const marketProb  = marketRaws[i]  / marketTotal;
+      const blended = (1 - marketWeight) * abilityProb + marketWeight * marketProb;
+      const prob = blended * eligibleShare;
+      evMap.set(h.horse_id, {
+        winProb: Math.round(prob * 1000) / 10,
+        ev: Math.round(prob * h.odds * 100) / 100,
+      });
+    });
   }
 
-  // 結果 Map を組み立て（確率は % 表示、EV は小数2桁）
-  evList.forEach((h) => {
-    result.set(h.horse_id, {
-      symbol: symbolMap.get(h.horse_id)!,
-      winProb: Math.round(h.prob * 1000) / 10,   // 例: 0.123 → 12.3%
-      ev: Math.round(h.ev * 100) / 100,           // 例: 1.23
-    });
+  // ── シンボル割り当て: valueScore = gap / abilityRank ─────────────
+  const abilityRankMap = calcAllAbilityRanks(entries);
+
+  const valueCandidates = entries
+    .filter((e) => e.horse_id != null && e.popularity != null)
+    .flatMap((e) => {
+      const abilityRank = abilityRankMap.get(e.horse_id!);
+      if (!abilityRank) return [];
+      const oddsRank = e.popularity!;
+      const gap = oddsRank - abilityRank;
+      if (gap <= 0) return [];
+      return [{ horse_id: e.horse_id!, abilityRank, oddsRank, valueScore: gap / abilityRank }];
+    })
+    .sort((a, b) => b.valueScore - a.valueScore);
+
+  const mainSymbols: PickSymbol[] = ["◎", "○", "▲", "△"];
+  const assignedIds = new Set<number>();
+
+  valueCandidates.forEach((h, i) => {
+    const symbol = i < mainSymbols.length ? mainSymbols[i] : "★";
+    const ev = evMap.get(h.horse_id) ?? { winProb: 0, ev: 0 };
+    result.set(h.horse_id, { symbol, ...ev });
+    assignedIds.add(h.horse_id);
   });
+
+  // データあり・バリュー外 → ✓
+  for (const e of entries) {
+    if (e.horse_id != null && !assignedIds.has(e.horse_id) && abilityRankMap.has(e.horse_id)) {
+      const ev = evMap.get(e.horse_id) ?? { winProb: 0, ev: 0 };
+      result.set(e.horse_id, { symbol: "✓", ...ev });
+    }
+  }
 
   return result;
 }
