@@ -26,7 +26,7 @@ function calcAllHorseStats(withForm: UpcomingEntryWithForm[]): Map<number, Horse
     .filter((e) => e.horse_id !== null && e.popularity !== null)
     .map((e) => {
       const valid = e.recentPerfs.filter(
-        (p) => p.eval_tag !== "disregard" && p.eval_tag !== "above"
+        (p) => p.eval_tag !== "disregard"
       );
       if (valid.length < 1) return null;
       const avg = valid.reduce((sum, p) => sum + calcCorrectedScore(p), 0) / valid.length;
