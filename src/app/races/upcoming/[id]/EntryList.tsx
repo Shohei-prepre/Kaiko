@@ -44,18 +44,27 @@ function EvalMiniBadge({ perf }: { perf: RecentPerf }) {
   );
 }
 
+const RUNNING_STYLE_STYLE: Record<string, { bg: string; text: string; border: string }> = {
+  "逃げ":   { bg: "bg-red-50",    text: "text-red-600",    border: "border-red-200" },
+  "先行":   { bg: "bg-amber-50",  text: "text-amber-700",  border: "border-amber-200" },
+  "差し":   { bg: "bg-blue-50",   text: "text-blue-600",   border: "border-blue-200" },
+  "追い込み": { bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-200" },
+};
+
 interface Props {
   entriesWithForm: UpcomingEntryWithForm[];
   valueBetMap: [number, ValueBetDetail][];
   picksMap: [number, HorsePick][];
+  runningStyleMap: [number, string][];
 }
 
-export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, picksMap: picksArr }: Props) {
+export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, picksMap: picksArr, runningStyleMap: runningStyleArr }: Props) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   // Map に復元
   const valueBetMap = new Map<number, ValueBetDetail>(valueBetArr);
   const picksMap = new Map<number, HorsePick>(picksArr);
+  const runningStyleMap = new Map<number, string>(runningStyleArr);
 
   return (
     <section className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[var(--kaiko-border)] overflow-hidden">
@@ -86,6 +95,8 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
           const horseHref = entry.horse_id ? `/horses/${entry.horse_id}` : undefined;
           const isExpanded = expandedId === entry.id;
           const pickStyle = pick ? PICK_STYLE[pick.symbol] : null;
+          const runningStyle = entry.horse_id ? runningStyleMap.get(entry.horse_id) : undefined;
+          const rsStyle = runningStyle ? RUNNING_STYLE_STYLE[runningStyle] : null;
 
           // pick がなくても逆張り詳細があればタップ可能にする
           const isExpandable = !!(pick || vbDetail);
@@ -157,6 +168,11 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
                       {entry.weight_carried && (
                         <span className="text-[10px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)]">
                           {entry.weight_carried}kg
+                        </span>
+                      )}
+                      {runningStyle && rsStyle && (
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${rsStyle.bg} ${rsStyle.border} ${rsStyle.text} shrink-0`}>
+                          {runningStyle}
                         </span>
                       )}
                     </div>

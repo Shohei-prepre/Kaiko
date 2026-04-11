@@ -64,11 +64,29 @@ async function resolveHorseIdsByName(names: string[]): Promise<Map<string, numbe
   return map;
 }
 
+/** 通過順位（position_order）の平均先頭ポジションから脚質を推定 */
+function calcRunningStyle(positionOrders: (string | null)[]): string | null {
+  const firsts = positionOrders
+    .map((p) => {
+      if (!p) return null;
+      const n = parseInt(p.split("-")[0], 10);
+      return isNaN(n) ? null : n;
+    })
+    .filter((n): n is number => n !== null);
+  if (firsts.length === 0) return null;
+  const avg = firsts.reduce((a, b) => a + b, 0) / firsts.length;
+  if (avg <= 2.0) return "逃げ";
+  if (avg <= 4.5) return "先行";
+  if (avg <= 9.0) return "差し";
+  return "追い込み";
+}
+
 async function getRecentPerfsForHorses(
   horseIds: number[]
-): Promise<Map<number, RecentPerf[]>> {
-  const result = new Map<number, RecentPerf[]>();
-  if (horseIds.length === 0) return result;
+): Promise<{ perfsMap: Map<number, RecentPerf[]>; runningStyleMap: Map<number, string> }> {
+  const perfsMap = new Map<number, RecentPerf[]>();
+  const runningStyleMap = new Map<number, string>();
+  if (horseIds.length === 0) return { perfsMap, runningStyleMap };
 
   try {
     const { data, error } = await supabase
@@ -83,11 +101,12 @@ async function getRecentPerfsForHorses(
         weight_effect_value,
         track_condition_value,
         pace_effect_value,
+        position_order,
         races ( race_name, race_date )
       `)
       .in("horse_id", horseIds);
 
-    if (error || !data) return result;
+    if (error || !data) return { perfsMap, runningStyleMap };
 
     type RawPerf = {
       horse_id: number;
@@ -99,6 +118,7 @@ async function getRecentPerfsForHorses(
       weight_effect_value: number | null;
       track_condition_value: number | null;
       pace_effect_value: number | null;
+      position_order: string | null;
       races: { race_name: string; race_date: string } | null;
     };
 
@@ -112,8 +132,18 @@ async function getRecentPerfsForHorses(
     for (const [hid, perfs] of byHorse.entries()) {
       const sorted = perfs
         .sort((a, b) => b.races!.race_date.localeCompare(a.races!.race_date))
-        .slice(0, 5)
-        .map((p) => ({
+        .slice(0, 5);
+
+      // 脚質推定（disregard 除外、直近5走の position_order を使用）
+      const validPositions = sorted
+        .filter((p) => p.eval_tag !== "disregard")
+        .map((p) => p.position_order);
+      const style = calcRunningStyle(validPositions);
+      if (style) runningStyleMap.set(hid, style);
+
+      perfsMap.set(
+        hid,
+        sorted.map((p) => ({
           race_name: p.races!.race_name,
           race_date: p.races!.race_date,
           finish_order: p.finish_order,
@@ -124,14 +154,14 @@ async function getRecentPerfsForHorses(
           weight_effect_value: p.weight_effect_value,
           track_condition_value: p.track_condition_value,
           pace_effect_value: p.pace_effect_value,
-        }));
-      result.set(hid, sorted);
+        }))
+      );
     }
   } catch {
     // テーブルが存在しない場合など
   }
 
-  return result;
+  return { perfsMap, runningStyleMap };
 }
 
 // ── ヘルパー ──────────────────────────────────────────────────
@@ -201,11 +231,11 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
     .map((e) => e.horse_id)
     .filter((hid): hid is number => hid !== null);
 
-  const recentPerfsMap = await getRecentPerfsForHorses(horseIds);
+  const { perfsMap, runningStyleMap } = await getRecentPerfsForHorses(horseIds);
 
   const entriesWithForm: UpcomingEntryWithForm[] = resolvedEntries.map((e) => ({
     ...e,
-    recentPerfs: e.horse_id ? (recentPerfsMap.get(e.horse_id) ?? []) : [],
+    recentPerfs: e.horse_id ? (perfsMap.get(e.horse_id) ?? []) : [],
   }));
 
   const buyCandidates = entriesWithForm.filter((e) => isBuyCandidate(e.recentPerfs));
@@ -219,6 +249,7 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
   // Client Componentに渡すためにMapをArrayに変換
   const valueBetArr = Array.from(valueBetMap.entries());
   const picksArr = Array.from(picksMap.entries());
+  const runningStyleArr = Array.from(runningStyleMap.entries());
 
   return (
     <>
@@ -371,6 +402,7 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
         <EntryList
           entriesWithForm={entriesWithForm}
           valueBetMap={valueBetArr}
+          runningStyleMap={runningStyleArr}
           picksMap={picksArr}
         />
 
