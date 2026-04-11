@@ -56,15 +56,17 @@ interface Props {
   valueBetMap: [number, ValueBetDetail][];
   picksMap: [number, HorsePick][];
   runningStyleMap: [number, string][];
+  abilityRankMap: [number, number][];
 }
 
-export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, picksMap: picksArr, runningStyleMap: runningStyleArr }: Props) {
+export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, picksMap: picksArr, runningStyleMap: runningStyleArr, abilityRankMap: abilityRankArr }: Props) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   // Map に復元
   const valueBetMap = new Map<number, ValueBetDetail>(valueBetArr);
   const picksMap = new Map<number, HorsePick>(picksArr);
   const runningStyleMap = new Map<number, string>(runningStyleArr);
+  const abilityRankMap = new Map<number, number>(abilityRankArr);
 
   return (
     <section className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[var(--kaiko-border)] overflow-hidden">
@@ -97,6 +99,7 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
           const pickStyle = pick ? PICK_STYLE[pick.symbol] : null;
           const runningStyle = entry.horse_id ? runningStyleMap.get(entry.horse_id) : undefined;
           const rsStyle = runningStyle ? RUNNING_STYLE_STYLE[runningStyle] : null;
+          const abilityRank = entry.horse_id ? abilityRankMap.get(entry.horse_id) : undefined;
 
           // pick がなくても逆張り詳細があればタップ可能にする
           const isExpandable = !!(pick || vbDetail);
@@ -173,6 +176,11 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
                       {runningStyle && rsStyle && (
                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${rsStyle.bg} ${rsStyle.border} ${rsStyle.text} shrink-0`}>
                           {runningStyle}
+                        </span>
+                      )}
+                      {abilityRank !== undefined && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-indigo-50 border-indigo-200 text-indigo-600 shrink-0">
+                          能力{abilityRank}位
                         </span>
                       )}
                     </div>

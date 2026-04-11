@@ -213,6 +213,31 @@ export function calcValueBetDetails(
   return result;
 }
 
+/**
+ * 全出走馬の能力推定ランクを返す（データがある馬のみ）。
+ * 返り値: horse_id → abilityRank（1=最強）
+ */
+export function calcAllAbilityRanks(
+  entries: UpcomingEntryWithForm[]
+): Map<number, number> {
+  const result = new Map<number, number>();
+  const withScore = entries
+    .filter((e) => e.horse_id !== null)
+    .map((e) => {
+      const valid = e.recentPerfs.filter((p) => p.eval_tag !== "disregard" && p.eval_tag !== "above");
+      if (valid.length < 1) return null;
+      const avg = valid.reduce((sum, p) => sum + calcCorrectedScore(p), 0) / valid.length;
+      return { horse_id: e.horse_id!, avg };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+
+  [...withScore]
+    .sort((a, b) => a.avg - b.avg)
+    .forEach((x, i) => result.set(x.horse_id, i + 1));
+
+  return result;
+}
+
 /** @deprecated calcValueBetDetails を使ってください */
 export function calcValueBetFlags(entries: UpcomingEntryWithForm[]): Set<number> {
   return new Set(calcValueBetDetails(entries).keys());
@@ -254,7 +279,7 @@ export function calcHorsePicks(
   entries: UpcomingEntryWithForm[],
   valueBetMap: Map<number, ValueBetDetail>,
   k = 0.3,
-  marketWeight = 0.6   // ← ここを変えて人気 vs 能力のバランスを調整
+  marketWeight = 0.75  // ← ここを変えて人気 vs 能力のバランスを調整
 ): Map<number, HorsePick> {
   const result = new Map<number, HorsePick>();
 

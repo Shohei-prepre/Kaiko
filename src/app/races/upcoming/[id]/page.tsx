@@ -8,7 +8,7 @@ import type {
   RecentPerf,
   EvalTag,
 } from "@/lib/database.types";
-import { isBuyCandidate, calcValueBetDetails, calcHorsePicks } from "@/lib/database.types";
+import { isBuyCandidate, calcValueBetDetails, calcHorsePicks, calcAllAbilityRanks } from "@/lib/database.types";
 import { getCourseCharacteristic } from "@/lib/courseCharacteristics";
 import BottomNav from "@/components/BottomNav";
 import BackButton from "@/components/BackButton";
@@ -241,6 +241,7 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
   const buyCandidates = entriesWithForm.filter((e) => isBuyCandidate(e.recentPerfs));
   const valueBetMap = calcValueBetDetails(entriesWithForm);
   const picksMap = calcHorsePicks(entriesWithForm, valueBetMap);
+  const abilityRankMap = calcAllAbilityRanks(entriesWithForm);
 
   const gradeBadge = GRADE_BADGE[race.grade] ?? GRADE_BADGE["OP"];
   const surfaceBadge = SURFACE_BADGE[race.surface] ?? SURFACE_BADGE["芝"];
@@ -250,6 +251,7 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
   const valueBetArr = Array.from(valueBetMap.entries());
   const picksArr = Array.from(picksMap.entries());
   const runningStyleArr = Array.from(runningStyleMap.entries());
+  const abilityRankArr = Array.from(abilityRankMap.entries());
 
   return (
     <>
@@ -403,6 +405,7 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
           entriesWithForm={entriesWithForm}
           valueBetMap={valueBetArr}
           runningStyleMap={runningStyleArr}
+          abilityRankMap={abilityRankArr}
           picksMap={picksArr}
         />
 
