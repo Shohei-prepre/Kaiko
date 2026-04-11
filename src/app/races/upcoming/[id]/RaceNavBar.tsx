@@ -21,8 +21,14 @@ export default function RaceNavBar({ races, currentRaceId, currentTrack, current
   // 会場一覧（順序維持）
   const tracks = [...new Set(races.map((r) => r.track))];
 
-  // 現在会場のレース番号一覧
-  const sameTrackRaces = races.filter((r) => r.track === currentTrack).sort((a, b) => a.race_number - b.race_number);
+  // 現在会場のレース番号一覧（昇順）
+  const sameTrackRaces = races
+    .filter((r) => r.track === currentTrack)
+    .sort((a, b) => a.race_number - b.race_number);
+
+  const currentIdx = sameTrackRaces.findIndex((r) => r.race_id === currentRaceId);
+  const prevRace = currentIdx > 0 ? sameTrackRaces[currentIdx - 1] : null;
+  const nextRace = currentIdx < sameTrackRaces.length - 1 ? sameTrackRaces[currentIdx + 1] : null;
 
   // 会場クリック → 同じレース番号があればそこへ、なければその会場の最初のレースへ
   const handleTrackClick = (track: string) => {
@@ -31,12 +37,6 @@ export default function RaceNavBar({ races, currentRaceId, currentTrack, current
     const first = races.find((r) => r.track === track);
     const target = same ?? first;
     if (target) router.push(`/races/upcoming/${target.race_id}`);
-  };
-
-  // レース番号クリック
-  const handleRaceClick = (raceId: string) => {
-    if (raceId === currentRaceId) return;
-    router.push(`/races/upcoming/${raceId}`);
   };
 
   return (
@@ -50,10 +50,10 @@ export default function RaceNavBar({ races, currentRaceId, currentTrack, current
               <button
                 key={track}
                 onClick={() => handleTrackClick(track)}
-                className={`shrink-0 px-4 py-1.5 text-[11px] font-black tracking-wide transition-colors ${
+                className={`shrink-0 px-5 py-2 text-[12px] font-black tracking-wide transition-colors ${
                   isActive
                     ? "text-[var(--kaiko-primary)] border-b-2 border-[var(--kaiko-primary)]"
-                    : "text-[var(--kaiko-text-muted)] hover:text-[var(--kaiko-text-main)]"
+                    : "text-[var(--kaiko-text-muted)]"
                 }`}
               >
                 {track}
@@ -63,24 +63,35 @@ export default function RaceNavBar({ races, currentRaceId, currentTrack, current
         </div>
       )}
 
-      {/* レース番号タブ */}
-      <div className="flex overflow-x-auto scrollbar-none px-2 py-1 gap-1">
-        {sameTrackRaces.map((r) => {
-          const isActive = r.race_id === currentRaceId;
-          return (
-            <button
-              key={r.race_id}
-              onClick={() => handleRaceClick(r.race_id)}
-              className={`shrink-0 min-w-[36px] px-2 py-1 rounded text-[11px] font-black font-[family-name:var(--font-rajdhani)] transition-colors ${
-                isActive
-                  ? "bg-[var(--kaiko-primary)] text-white"
-                  : "bg-gray-100 text-[var(--kaiko-text-muted)] hover:bg-gray-200"
-              }`}
-            >
-              {r.race_number}R
-            </button>
-          );
-        })}
+      {/* レースナビ: 前後1R + 現在 */}
+      <div className="flex items-center justify-between px-3 py-1.5">
+        <button
+          onClick={() => prevRace && router.push(`/races/upcoming/${prevRace.race_id}`)}
+          disabled={!prevRace}
+          className={`flex items-center gap-1 px-3 py-1.5 rounded text-[12px] font-bold transition-colors min-w-[64px] ${
+            prevRace
+              ? "bg-gray-100 text-[var(--kaiko-text-main)]"
+              : "opacity-0 pointer-events-none"
+          }`}
+        >
+          ← {prevRace ? `${prevRace.race_number}R` : ""}
+        </button>
+
+        <span className="text-[14px] font-black text-[var(--kaiko-primary)] font-[family-name:var(--font-rajdhani)]">
+          {currentRaceNumber}R
+        </span>
+
+        <button
+          onClick={() => nextRace && router.push(`/races/upcoming/${nextRace.race_id}`)}
+          disabled={!nextRace}
+          className={`flex items-center justify-end gap-1 px-3 py-1.5 rounded text-[12px] font-bold transition-colors min-w-[64px] ${
+            nextRace
+              ? "bg-gray-100 text-[var(--kaiko-text-main)]"
+              : "opacity-0 pointer-events-none"
+          }`}
+        >
+          {nextRace ? `${nextRace.race_number}R` : ""} →
+        </button>
       </div>
     </div>
   );
