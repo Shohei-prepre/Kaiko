@@ -151,7 +151,7 @@ export function isBuyCandidate(recentPerfs: RecentPerf[]): boolean {
 }
 
 /** 1走分の補正後スコアを計算（小さいほど強い） */
-function calcCorrectedScore(perf: RecentPerf): number {
+export function calcCorrectedScore(perf: RecentPerf): number {
   const ability =
     (perf.trouble_value ?? 0) +
     (perf.temperament_value ?? 0) +
