@@ -129,8 +129,11 @@ export interface UpcomingEntry {
 export interface RecentPerf {
   race_name: string;
   race_date: string;
+  race_id: string;
   finish_order: number;
   margin: number | null;
+  /** 1着からの累積着差（馬身）。データがあれば calcCorrectedScore のベースに使う */
+  cumulative_margin: number | null;
   eval_tag: EvalTag | null;
   // ability_value 計算用
   trouble_value: number | null;
@@ -150,7 +153,11 @@ export function isBuyCandidate(recentPerfs: RecentPerf[]): boolean {
   return valid.filter((p) => p.eval_tag === "below").length >= 2;
 }
 
-/** 1走分の補正後スコアを計算（小さいほど強い） */
+/**
+ * 1走分の補正後スコアを計算（小さいほど強い）
+ * cumulative_margin がある場合は着差ベース（比較ページと同一の物差し）、
+ * なければ着順ベースにフォールバック。
+ */
 export function calcCorrectedScore(perf: RecentPerf): number {
   const ability =
     (perf.trouble_value ?? 0) +
@@ -158,7 +165,8 @@ export function calcCorrectedScore(perf: RecentPerf): number {
     (perf.weight_effect_value ?? 0) +
     (perf.track_condition_value ?? 0) +
     (perf.pace_effect_value ?? 0);
-  return perf.finish_order - ability;
+  const base = perf.cumulative_margin ?? perf.finish_order;
+  return base - ability;
 }
 
 export interface ValueBetDetail {

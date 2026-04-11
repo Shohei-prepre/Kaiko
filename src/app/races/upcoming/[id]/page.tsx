@@ -9,6 +9,7 @@ import type {
   EvalTag,
 } from "@/lib/database.types";
 import { isBuyCandidate, calcValueBetDetails, calcHorsePicks, calcAllAbilityRanks } from "@/lib/database.types";
+import { buildRaceMarginMaps } from "@/lib/parseMargin";
 import { getCourseCharacteristic } from "@/lib/courseCharacteristics";
 import BottomNav from "@/components/BottomNav";
 import BackButton from "@/components/BackButton";
@@ -114,6 +115,7 @@ async function getRecentPerfsForHorses(
       .from("horse_performances")
       .select(`
         horse_id,
+        race_id,
         finish_order,
         margin,
         eval_tag,
@@ -131,6 +133,7 @@ async function getRecentPerfsForHorses(
 
     type RawPerf = {
       horse_id: number;
+      race_id: string;
       finish_order: number;
       margin: number | null;
       eval_tag: EvalTag | null;
@@ -143,9 +146,25 @@ async function getRecentPerfsForHorses(
       races: { race_name: string; race_date: string } | null;
     };
 
+    const rawPerfs = (data as RawPerf[]).filter((r) => r.races);
+
+    // 累積着差マップ構築：全馬データが必要なので race_id で別途取得
+    const uniqueRaceIds = [...new Set(rawPerfs.map((p) => p.race_id))];
+    let raceMarginMaps = new Map<string, Map<number, number>>();
+    if (uniqueRaceIds.length > 0) {
+      const { data: allMargins } = await supabase
+        .from("horse_performances")
+        .select("horse_id, race_id, finish_order, margin")
+        .in("race_id", uniqueRaceIds);
+      if (allMargins) {
+        raceMarginMaps = buildRaceMarginMaps(
+          allMargins as { horse_id: number; race_id: string; finish_order: number; margin: number | null }[]
+        );
+      }
+    }
+
     const byHorse = new Map<number, RawPerf[]>();
-    for (const row of data as RawPerf[]) {
-      if (!row.races) continue;
+    for (const row of rawPerfs) {
       if (!byHorse.has(row.horse_id)) byHorse.set(row.horse_id, []);
       byHorse.get(row.horse_id)!.push(row);
     }
@@ -167,8 +186,10 @@ async function getRecentPerfsForHorses(
         sorted.map((p) => ({
           race_name: p.races!.race_name,
           race_date: p.races!.race_date,
+          race_id: p.race_id,
           finish_order: p.finish_order,
           margin: p.margin,
+          cumulative_margin: raceMarginMaps.get(p.race_id)?.get(p.horse_id) ?? null,
           eval_tag: p.eval_tag,
           trouble_value: p.trouble_value,
           temperament_value: p.temperament_value,

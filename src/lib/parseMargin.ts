@@ -36,7 +36,7 @@ export function parseMarginText(text: string | null | undefined): number {
 }
 
 /**
- * レース内の全馬データから「1着からの累積馬身差」マップを構築する
+ * レース内の全馬データから「1着からの累積馬身差」マップを構築する（着差テキスト版）
  * perfs: 同一レースの全馬 { horse_id, finish_order, margin } を finish_order 昇順で渡す
  * 返り値: horse_id → 1着からの累積馬身差（1着=0）
  */
@@ -53,6 +53,37 @@ export function buildCumulativeMargins(
       cumulative += parseMarginText(p.margin);
       result.set(p.horse_id, cumulative);
     }
+  }
+  return result;
+}
+
+/**
+ * 複数レースの全馬 perf から「race_id → horse_id → 1着からの累積馬身差」を構築する（数値margin版）
+ * DBの horse_performances.margin（number | null）を直接使う。
+ * 返り値: Map<race_id, Map<horse_id, cumulative_margin>>（1着=0）
+ */
+export function buildRaceMarginMaps(
+  perfs: { horse_id: number; race_id: string; finish_order: number; margin: number | null }[]
+): Map<string, Map<number, number>> {
+  const byRace = new Map<string, typeof perfs>();
+  for (const p of perfs) {
+    if (!byRace.has(p.race_id)) byRace.set(p.race_id, []);
+    byRace.get(p.race_id)!.push(p);
+  }
+  const result = new Map<string, Map<number, number>>();
+  for (const [raceId, racePerfs] of byRace.entries()) {
+    const sorted = [...racePerfs].sort((a, b) => a.finish_order - b.finish_order);
+    const horseMap = new Map<number, number>();
+    let cum = 0;
+    for (const p of sorted) {
+      if (p.finish_order === 1) {
+        horseMap.set(p.horse_id, 0);
+      } else {
+        cum += p.margin ?? 0;
+        horseMap.set(p.horse_id, cum);
+      }
+    }
+    result.set(raceId, horseMap);
   }
   return result;
 }

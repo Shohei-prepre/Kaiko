@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
 import type { Horse, HorsePerformance, Race } from "@/lib/database.types";
+import { buildRaceMarginMaps } from "@/lib/parseMargin";
 import BottomNav from "@/components/BottomNav";
 
 function BackButtonClient() {
@@ -54,36 +55,6 @@ interface BenchmarkCandidate {
   raceCount: number;
   perfsInARaces: PerfWithRace[]; // 物差し馬の、馬Aと同走したレースのperf
   perfsInBRaces: PerfWithRace[]; // 物差し馬の、馬Bと同走したレースのperf
-}
-
-/**
- * 複数レースの全馬 perf から「race_id → horse_id → 1着からの累積馬身差」を構築する。
- * margin は「直前の馬との差」として DB に格納されているものを想定。
- */
-function buildRaceMarginMaps(
-  perfs: { horse_id: number; race_id: string; finish_order: number; margin: number | null }[]
-): Map<string, Map<number, number>> {
-  const byRace = new Map<string, typeof perfs>();
-  for (const p of perfs) {
-    if (!byRace.has(p.race_id)) byRace.set(p.race_id, []);
-    byRace.get(p.race_id)!.push(p);
-  }
-  const result = new Map<string, Map<number, number>>();
-  for (const [raceId, racePerfs] of byRace.entries()) {
-    const sorted = [...racePerfs].sort((a, b) => a.finish_order - b.finish_order);
-    const horseMap = new Map<number, number>();
-    let cum = 0;
-    for (const p of sorted) {
-      if (p.finish_order === 1) {
-        horseMap.set(p.horse_id, 0);
-      } else {
-        cum += p.margin ?? 0;
-        horseMap.set(p.horse_id, cum);
-      }
-    }
-    result.set(raceId, horseMap);
-  }
-  return result;
 }
 
 /**

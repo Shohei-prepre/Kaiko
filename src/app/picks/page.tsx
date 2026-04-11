@@ -14,6 +14,7 @@ import {
   calcHorsePicks,
   calcCorrectedScore,
 } from "@/lib/database.types";
+import { buildRaceMarginMaps } from "@/lib/parseMargin";
 import PicksClient from "./PicksClient";
 import type { RaceWithPicks, PickEntry, HorseStats } from "./PicksClient";
 
@@ -105,6 +106,7 @@ async function fetchPicksData(): Promise<RaceWithPicks[]> {
         .from("horse_performances")
         .select(`
           horse_id,
+          race_id,
           finish_order,
           margin,
           eval_tag,
@@ -119,6 +121,7 @@ async function fetchPicksData(): Promise<RaceWithPicks[]> {
 
       type RawPerf = {
         horse_id: number;
+        race_id: string;
         finish_order: number;
         margin: number | null;
         eval_tag: EvalTag | null;
@@ -130,8 +133,25 @@ async function fetchPicksData(): Promise<RaceWithPicks[]> {
         races: { race_name: string; race_date: string } | null;
       };
 
+      const rawPerfs = (perfs ?? []) as RawPerf[];
+
+      // 累積着差マップ構築：全馬の finish_order+margin が必要なので race_id で別途取得
+      const uniqueRaceIds = [...new Set(rawPerfs.filter((p) => p.races).map((p) => p.race_id))];
+      let raceMarginMaps = new Map<string, Map<number, number>>();
+      if (uniqueRaceIds.length > 0) {
+        const { data: allMargins } = await supabase
+          .from("horse_performances")
+          .select("horse_id, race_id, finish_order, margin")
+          .in("race_id", uniqueRaceIds);
+        if (allMargins) {
+          raceMarginMaps = buildRaceMarginMaps(
+            allMargins as { horse_id: number; race_id: string; finish_order: number; margin: number | null }[]
+          );
+        }
+      }
+
       const byHorse = new Map<number, RawPerf[]>();
-      for (const row of (perfs ?? []) as RawPerf[]) {
+      for (const row of rawPerfs) {
         if (!row.races) continue;
         if (!byHorse.has(row.horse_id)) byHorse.set(row.horse_id, []);
         byHorse.get(row.horse_id)!.push(row);
@@ -146,8 +166,10 @@ async function fetchPicksData(): Promise<RaceWithPicks[]> {
             .map((p) => ({
               race_name: p.races!.race_name,
               race_date: p.races!.race_date,
+              race_id: p.race_id,
               finish_order: p.finish_order,
               margin: p.margin,
+              cumulative_margin: raceMarginMaps.get(p.race_id)?.get(p.horse_id) ?? null,
               eval_tag: p.eval_tag,
               trouble_value: p.trouble_value,
               temperament_value: p.temperament_value,
