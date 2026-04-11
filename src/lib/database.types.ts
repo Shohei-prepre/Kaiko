@@ -234,26 +234,27 @@ export interface HorsePick {
  * 出走馬ごとの推奨シンボルと期待値を計算する。
  *
  * 【確率推定の考え方】
- * - データがある馬（eligible）に対してソフトマックスで「相対的な強さ」を計算
- * - しかし eligible が全出走頭数より少ない場合、残りの馬にも確率がある
- * - そのため eligible の合計確率を (eligible数 / 全頭数) に圧縮し、
- *   残り (1 - eligibleShare) を eligible 外の馬に均等分配する補正を行う
- * - これにより「データが1頭だけ → 勝率100%」という過大評価を防ぐ
+ * - 推定勝率 = 能力スコア確率（ソフトマックス）× (1-marketWeight)
+ *            + 市場確率（1/オッズの正規化）× marketWeight のブレンド
+ * - marketWeight=0 → 純能力評価、marketWeight=1 → 純オッズ市場追従
+ * - eligible が全出走頭数より少ない場合は (eligible数 / 全頭数) に圧縮し
+ *   過大評価を防ぐ
  *
  * 【EVの意味】
- * - EV = 推定勝率(%) × 単勝オッズ / 100
+ * - EV = 推定勝率 × 単勝オッズ
  * - EV > 1.0 なら「理論上プラス収支」の馬
  * - 印は EV 降順で ◎○▲△ を割り当て
- *
  * - ★：逆張りフラグ馬のうち EV 最高かつ ◎○▲△ 外の 1 頭
  * - ✓：データあり・上記以外
  *
- * @param k ソフトマックス感度（大きいほどスコア差が確率差に強く出る）
+ * @param k            ソフトマックス感度（大きいほどスコア差が確率差に強く出る）
+ * @param marketWeight 市場オッズへの重み 0〜1（0=純能力、1=純市場）
  */
 export function calcHorsePicks(
   entries: UpcomingEntryWithForm[],
   valueBetMap: Map<number, ValueBetDetail>,
-  k = 0.3
+  k = 0.3,
+  marketWeight = 0.6   // ← ここを変えて人気 vs 能力のバランスを調整
 ): Map<number, HorsePick> {
   const result = new Map<number, HorsePick>();
 
@@ -274,20 +275,25 @@ export function calcHorsePicks(
   // eligible が0頭なら印なし
   if (eligible.length < 1) return result;
 
-  // ── 確率補正 ────────────────────────────────────────────────────
-  // eligible 内でのソフトマックス（相対的強さの比率）
-  const raws = eligible.map((h) => Math.exp(-h.avg * k));
-  const rawTotal = raws.reduce((a, b) => a + b, 0);
+  // ── 能力確率: ソフトマックス（補正スコアが低いほど強い）──────────
+  const abilityRaws = eligible.map((h) => Math.exp(-h.avg * k));
+  const abilityTotal = abilityRaws.reduce((a, b) => a + b, 0);
+
+  // ── 市場確率: オッズの逆数（eligible内で正規化）──────────────────
+  // 低オッズ（人気馬）ほど高い確率になる
+  const marketRaws = eligible.map((h) => 1 / h.odds);
+  const marketTotal = marketRaws.reduce((a, b) => a + b, 0);
 
   // eligible 全体に割り当てる確率シェア = eligible数 / 全頭数
-  // 例: 18頭中4頭データあり → eligible には 4/18 = 22.2% を割り当て
   const eligibleShare = eligible.length / totalEntries;
 
   const evList = eligible.map((h, i) => {
-    // ソフトマックス比率 × eligibleShare = この馬の推定勝率
-    const prob = (raws[i] / rawTotal) * eligibleShare;
-    // EV = 推定勝率 × 単勝オッズ（1.0 = 回収率100%の基準）
-    const ev = prob * h.odds;
+    const abilityProb = abilityRaws[i] / abilityTotal;
+    const marketProb  = marketRaws[i]  / marketTotal;
+    // ブレンド: marketWeight で人気側と能力側のバランスを取る
+    const blended = (1 - marketWeight) * abilityProb + marketWeight * marketProb;
+    const prob = blended * eligibleShare;
+    const ev   = prob * h.odds;
     return { horse_id: h.horse_id, prob, ev };
   });
 
