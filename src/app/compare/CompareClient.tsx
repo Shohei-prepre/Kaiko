@@ -43,6 +43,7 @@ interface HorseOption {
   horse: Horse;
   perfs: PerfWithRace[];
   raceId?: string; // この馬をどのレースから選んだか（馬B選択時の同レースフィルタ用）
+  raceMarginMaps: Map<string, Map<number, number>>; // race_id → horse_id → 1着からの累積着差
 }
 
 // 物差し馬候補（perfsを保持してクライアントサイドで再計算可能にする）
@@ -55,13 +56,55 @@ interface BenchmarkCandidate {
   perfsInBRaces: PerfWithRace[]; // 物差し馬の、馬Bと同走したレースのperf
 }
 
-// 補正後能力差を計算（正 = perfA が perfB より強い）
+/**
+ * 複数レースの全馬 perf から「race_id → horse_id → 1着からの累積馬身差」を構築する。
+ * margin は「直前の馬との差」として DB に格納されているものを想定。
+ */
+function buildRaceMarginMaps(
+  perfs: { horse_id: number; race_id: string; finish_order: number; margin: number | null }[]
+): Map<string, Map<number, number>> {
+  const byRace = new Map<string, typeof perfs>();
+  for (const p of perfs) {
+    if (!byRace.has(p.race_id)) byRace.set(p.race_id, []);
+    byRace.get(p.race_id)!.push(p);
+  }
+  const result = new Map<string, Map<number, number>>();
+  for (const [raceId, racePerfs] of byRace.entries()) {
+    const sorted = [...racePerfs].sort((a, b) => a.finish_order - b.finish_order);
+    const horseMap = new Map<number, number>();
+    let cum = 0;
+    for (const p of sorted) {
+      if (p.finish_order === 1) {
+        horseMap.set(p.horse_id, 0);
+      } else {
+        cum += p.margin ?? 0;
+        horseMap.set(p.horse_id, cum);
+      }
+    }
+    result.set(raceId, horseMap);
+  }
+  return result;
+}
+
+/**
+ * 補正後能力差を計算（正 = perfA が perfB より強い）
+ * raceMarginMap がある場合は累積着差ベース、なければ着順差×0.5 にフォールバック。
+ */
 function calcAdjustedDiff(
   perfA: PerfWithRace,
   perfB: PerfWithRace,
-  raceTrackBias: number
+  raceTrackBias: number,
+  raceMarginMap?: Map<number, number>
 ): number {
-  const baseDiff = (perfB.finish_order - perfA.finish_order) * 0.5;
+  let baseDiff: number;
+  const cumA = raceMarginMap?.get(perfA.horse_id);
+  const cumB = raceMarginMap?.get(perfB.horse_id);
+  if (cumA !== undefined && cumB !== undefined) {
+    // cumB - cumA: 正 = A が B より前（A が強い）
+    baseDiff = cumB - cumA;
+  } else {
+    baseDiff = (perfB.finish_order - perfA.finish_order) * 0.5;
+  }
   const corrA =
     (perfA.weight_effect_value ?? 0) +
     (perfA.track_condition_value ?? 0) +
@@ -80,44 +123,32 @@ function calcAdjustedDiff(
 // 直接対決の能力差
 function calcDirectDiff(
   perfsA: PerfWithRace[],
-  perfsB: PerfWithRace[]
-): { diff: number; races: { perfA: PerfWithRace; perfB: PerfWithRace }[] } | null {
-  const results: { perfA: PerfWithRace; perfB: PerfWithRace }[] = [];
+  perfsB: PerfWithRace[],
+  raceMarginMaps?: Map<string, Map<number, number>>
+): { diff: number; races: { perfA: PerfWithRace; perfB: PerfWithRace; baseDiff: number }[] } | null {
+  const results: { perfA: PerfWithRace; perfB: PerfWithRace; baseDiff: number }[] = [];
   for (const pA of perfsA) {
     const pB = perfsB.find((p) => p.race_id === pA.race_id);
-    if (pB) results.push({ perfA: pA, perfB: pB });
+    if (pB) {
+      const marginMap = raceMarginMaps?.get(pA.race_id);
+      const cumA = marginMap?.get(pA.horse_id);
+      const cumB = marginMap?.get(pB.horse_id);
+      const baseDiff = (cumA !== undefined && cumB !== undefined)
+        ? cumB - cumA
+        : (pB.finish_order - pA.finish_order) * 0.5;
+      results.push({ perfA: pA, perfB: pB, baseDiff });
+    }
   }
   if (results.length === 0) return null;
-  const diffs = results.map(({ perfA, perfB }) =>
-    calcAdjustedDiff(perfA, perfB, perfA.races.track_bias_value ?? 0)
-  );
+  const diffs = results.map(({ perfA, perfB }) => {
+    const marginMap = raceMarginMaps?.get(perfA.race_id);
+    return calcAdjustedDiff(perfA, perfB, perfA.races.track_bias_value ?? 0, marginMap);
+  });
   return { diff: diffs.reduce((s, v) => s + v, 0) / diffs.length, races: results };
 }
 
-// 物差し馬経由の間接能力差
-// α = calcAdjustedDiff(perfA, benchmarkInA, raceA.track_bias) ← 馬Avs物差し馬
-// β = calcAdjustedDiff(benchmarkInB, perfB, raceB.track_bias) ← 物差し馬vs馬B
-// 推定差 = α + β
-function calcIndirectDiffForCandidate(
-  horseA: HorseOption,
-  horseB: HorseOption,
-  candidate: BenchmarkCandidate
-): number | null {
-  const diffs: number[] = [];
-  for (const cpA of candidate.perfsInARaces) {
-    const perfA = horseA.perfs.find((p) => p.race_id === cpA.race_id);
-    if (!perfA) continue;
-    const alpha = calcAdjustedDiff(perfA, cpA, cpA.races.track_bias_value ?? 0);
-    for (const cpB of candidate.perfsInBRaces) {
-      const perfB = horseB.perfs.find((p) => p.race_id === cpB.race_id);
-      if (!perfB) continue;
-      const beta = calcAdjustedDiff(cpB, perfB, cpB.races.track_bias_value ?? 0);
-      diffs.push(alpha + beta);
-    }
-  }
-  if (diffs.length === 0) return null;
-  return diffs.reduce((s, v) => s + v, 0) / diffs.length;
-}
+// 物差し馬経由の間接能力差は findBenchmarkCandidates 内で着差ベースで計算済みのため
+// selectedBenchmark.estimatedDiff を直接利用する。
 
 // 物差し馬候補を検索（両馬の直近5走に共通して出走した馬）
 async function findBenchmarkCandidates(
@@ -143,6 +174,20 @@ async function findBenchmarkCandidates(
       .neq("eval_tag", "disregard"),
   ]);
 
+  const allRacePerfs = [
+    ...((rawA ?? []) as PerfWithRaceAndHorse[]),
+    ...((rawB ?? []) as PerfWithRaceAndHorse[]),
+  ];
+  // 着差累積マップを構築（全馬の finish_order+margin が必要）
+  const raceMarginMaps = buildRaceMarginMaps(
+    allRacePerfs.map((p) => ({
+      horse_id: p.horse_id,
+      race_id: p.race_id,
+      finish_order: p.finish_order,
+      margin: p.margin,
+    }))
+  );
+
   const perfsInA = ((rawA ?? []) as PerfWithRaceAndHorse[]).filter(
     (p) => p.horse_id !== horseA.horse.horse_id && p.horse_id !== horseB.horse.horse_id
   );
@@ -165,11 +210,11 @@ async function findBenchmarkCandidates(
     for (const pA of cpA) {
       const perfA = horseA.perfs.find((p) => p.race_id === pA.race_id);
       if (!perfA) continue;
-      const alpha = calcAdjustedDiff(perfA, pA, pA.races.track_bias_value ?? 0);
+      const alpha = calcAdjustedDiff(perfA, pA, pA.races.track_bias_value ?? 0, raceMarginMaps.get(pA.race_id));
       for (const pB of cpB) {
         const perfB = horseB.perfs.find((p) => p.race_id === pB.race_id);
         if (!perfB) continue;
-        const beta = calcAdjustedDiff(pB, perfB, pB.races.track_bias_value ?? 0);
+        const beta = calcAdjustedDiff(pB, perfB, pB.races.track_bias_value ?? 0, raceMarginMaps.get(pB.race_id));
         diffs.push(alpha + beta);
       }
     }
@@ -208,6 +253,21 @@ async function fetchHorseOption(id: number, fromRaceId?: string): Promise<HorseO
     .order("race_id", { ascending: false })
     .limit(5);
 
+  // 着差累積計算用に同レースの全馬 finish_order+margin を取得
+  const raceIds = ((perfs ?? []) as { race_id: string }[]).map((p) => p.race_id);
+  let raceMarginMaps = new Map<string, Map<number, number>>();
+  if (raceIds.length > 0) {
+    const { data: allRacePerfs } = await supabase
+      .from("horse_performances")
+      .select("horse_id, race_id, finish_order, margin")
+      .in("race_id", raceIds);
+    if (allRacePerfs) {
+      raceMarginMaps = buildRaceMarginMaps(
+        allRacePerfs as { horse_id: number; race_id: string; finish_order: number; margin: number | null }[]
+      );
+    }
+  }
+
   // raceId の解決:
   // 1. 呼び出し元からレースを指定された場合はそれを使う
   // 2. それ以外は upcoming_entries から horse_id で出走予定レースを検索
@@ -222,7 +282,7 @@ async function fetchHorseOption(id: number, fromRaceId?: string): Promise<HorseO
     raceId = (entry as { race_id: string } | null)?.race_id ?? undefined;
   }
 
-  return { horse: horse as Horse, perfs: ((perfs ?? []) as PerfWithRace[]), raceId };
+  return { horse: horse as Horse, perfs: ((perfs ?? []) as PerfWithRace[]), raceId, raceMarginMaps };
 }
 
 // 補正値の色クラス
@@ -812,9 +872,9 @@ export default function CompareClient() {
     else setHorseB(opt);
   }, [modal]);
 
-  // 直接対決
+  // 直接対決（horseA の raceMarginMaps を使って着差ベースで計算）
   const directResult = useMemo(
-    () => (horseA && horseB ? calcDirectDiff(horseA.perfs, horseB.perfs) : null),
+    () => (horseA && horseB ? calcDirectDiff(horseA.perfs, horseB.perfs, horseA.raceMarginMaps) : null),
     [horseA, horseB]
   );
 
@@ -844,10 +904,8 @@ export default function CompareClient() {
 
   // 表示に使う能力差と種別
   const directDiff = directResult?.diff ?? null;
-  const indirectDiff = useMemo(() => {
-    if (!horseA || !horseB || !selectedBenchmark) return null;
-    return calcIndirectDiffForCandidate(horseA, horseB, selectedBenchmark);
-  }, [horseA, horseB, selectedBenchmark]);
+  // findBenchmarkCandidates 内で着差ベースで計算済みの値を直接使用
+  const indirectDiff = selectedBenchmark?.estimatedDiff ?? null;
 
   const diff = directDiff ?? indirectDiff;
   const isDirect = directResult !== null;
@@ -869,9 +927,7 @@ export default function CompareClient() {
       avgCorrA[item.key as string] = valsA.reduce((s, v) => s + v, 0) / valsA.length;
       avgCorrB[item.key as string] = valsB.reduce((s, v) => s + v, 0) / valsB.length;
     }
-    const rawDiffs = directResult.races.map(({ perfA, perfB }) =>
-      (perfB.finish_order - perfA.finish_order) * 0.5
-    );
+    const rawDiffs = directResult.races.map(({ baseDiff }) => baseDiff);
     avgRawDiff = rawDiffs.reduce((s, v) => s + v, 0) / rawDiffs.length;
     const biases = directResult.races.map(({ perfA }) => perfA.races.track_bias_value ?? 0);
     avgBias = biases.reduce((s, v) => s + v, 0) / biases.length;
@@ -1088,7 +1144,7 @@ export default function CompareClient() {
                   </span>
                   <span className="font-[family-name:var(--font-bebas-neue)] text-2xl text-[var(--kaiko-on-surface)]">
                     {tabRace
-                      ? formatVal((tabRace.perfB.finish_order - tabRace.perfA.finish_order) * 0.5)
+                      ? formatVal(tabRace.baseDiff)
                       : formatVal(avgRawDiff)}
                   </span>
                 </div>
