@@ -497,9 +497,16 @@ function PickHorseRow({ entry, isLast }: { entry: PickEntry; isLast: boolean }) 
               {entry.horseName}
             </span>
           </div>
-          {entry.jockey && (
-            <div className="text-[10px] text-[var(--kaiko-text-muted)] truncate">{entry.jockey}</div>
-          )}
+          <div className="flex items-center gap-1.5 mt-0.5">
+            {entry.jockey && (
+              <span className="text-[10px] text-[var(--kaiko-text-muted)] truncate">{entry.jockey}</span>
+            )}
+            {entry.stats && (
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 border border-indigo-200 text-indigo-600 shrink-0">
+                能力{entry.stats.abilityRank}位
+              </span>
+            )}
+          </div>
         </div>
 
         {/* オッズ */}
