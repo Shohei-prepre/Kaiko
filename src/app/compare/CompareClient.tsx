@@ -336,6 +336,12 @@ function HorseSelectModal({
   const [sameRaceLoading, setSameRaceLoading] = useState(false);
 
   const [races, setRaces] = useState<Race[]>([]);
+  // 出走前レースのIDセット（upcoming_races テーブル由来）
+  const [upcomingRaceIds, setUpcomingRaceIds] = useState<Set<string>>(new Set());
+  // 出走前レースの出走馬リスト（upcoming_entries 由来）
+  const [upcomingRaceHorses, setUpcomingRaceHorses] = useState<
+    { horseId: number; horseName: string; horseNumber: number | null; jockey: string | null; popularity: number | null }[]
+  >([]);
   // 絞り込みステップ: null=年月選択, "YYYY-MM"=週選択, "YYYY-MM-DD"=レース選択, race=馬選択
   const [selectedYearMonth, setSelectedYearMonth] = useState<string | null>(null);
   const [selectedWeekKey, setSelectedWeekKey] = useState<string | null>(null);
@@ -345,12 +351,29 @@ function HorseSelectModal({
 
   useEffect(() => {
     const supabase = getSupabase();
+    // 過去レース取得
     supabase
       .from("races")
       .select("race_id,race_name,race_date,track,grade,race_number")
       .not("race_date", "is", null)
       .order("race_date", { ascending: false })
       .then(({ data }) => setRaces((data ?? []) as Race[]));
+    // 出走前レース取得してマージ
+    Promise.resolve(
+      supabase
+        .from("upcoming_races" as never)
+        .select("race_id,race_name,race_date,track,grade,race_number")
+        .order("race_date", { ascending: false })
+    ).then(({ data }) => {
+      const rows = (data ?? []) as { race_id: string; race_name: string; race_date: string; track: string; grade: string; race_number: number | null }[];
+      if (rows.length === 0) return;
+      setUpcomingRaceIds(new Set(rows.map((r) => r.race_id)));
+      setRaces((prev) => {
+        const existingIds = new Set(prev.map((r) => r.race_id));
+        const newRows = rows.filter((r) => !existingIds.has(r.race_id)) as unknown as Race[];
+        return [...newRows, ...prev];
+      });
+    });
   }, []);
 
   // 「同じレースから」タブ: horseA.raceId があれば upcoming_entries から同レース馬を取得
@@ -415,23 +438,53 @@ function HorseSelectModal({
   useEffect(() => {
     if (!selectedRace) return;
     setRaceLoading(true);
+    setRaceHorses([]);
+    setUpcomingRaceHorses([]);
     const supabase = getSupabase();
-    supabase
-      .from("horse_performances")
-      .select("finish_order, eval_tag, horses(horse_id, name)")
-      .eq("race_id", selectedRace.race_id)
-      .order("finish_order")
-      .then(({ data }) => {
-        setRaceHorses(
-          (data ?? []).map((d: any) => ({
-            horse: d.horses as Horse,
-            finish_order: d.finish_order,
-            eval_tag: d.eval_tag ?? "fair",
+
+    if (upcomingRaceIds.has(selectedRace.race_id)) {
+      // 出走前レース：upcoming_entries から取得
+      Promise.resolve(
+        supabase
+          .from("upcoming_entries" as never)
+          .select("horse_id, horse_name, horse_number, jockey, popularity")
+          .eq("race_id", selectedRace.race_id)
+          .order("horse_number")
+      ).then(({ data }) => {
+        const rows = (data ?? []) as {
+          horse_id: number | null; horse_name: string;
+          horse_number: number | null; jockey: string | null; popularity: number | null;
+        }[];
+        setUpcomingRaceHorses(
+          rows.filter((r) => r.horse_id !== null).map((r) => ({
+            horseId: r.horse_id!,
+            horseName: r.horse_name,
+            horseNumber: r.horse_number,
+            jockey: r.jockey,
+            popularity: r.popularity,
           }))
         );
         setRaceLoading(false);
       });
-  }, [selectedRace]);
+    } else {
+      // 過去レース：horse_performances から取得
+      supabase
+        .from("horse_performances")
+        .select("finish_order, eval_tag, horses(horse_id, name)")
+        .eq("race_id", selectedRace.race_id)
+        .order("finish_order")
+        .then(({ data }) => {
+          setRaceHorses(
+            (data ?? []).map((d: any) => ({
+              horse: d.horses as Horse,
+              finish_order: d.finish_order,
+              eval_tag: d.eval_tag ?? "fair",
+            }))
+          );
+          setRaceLoading(false);
+        });
+    }
+  }, [selectedRace, upcomingRaceIds]);
 
   // パンくずのステップ判定
   const step = selectedRace ? "horses" : selectedWeekKey ? "races" : selectedYearMonth ? "weeks" : "months";
@@ -680,11 +733,42 @@ function HorseSelectModal({
                   <p className="text-[11px] font-bold text-[var(--kaiko-text-muted)]">
                     {selectedRace.race_date?.slice(5).replace("-", "/")} {selectedRace.track}{" "}
                     {selectedRace.race_name}
+                    {upcomingRaceIds.has(selectedRace.race_id) && (
+                      <span className="ml-2 text-[9px] text-emerald-600 font-bold uppercase font-[family-name:var(--font-rajdhani)] tracking-wider">UPCOMING</span>
+                    )}
                   </p>
                 </div>
                 {raceLoading ? (
                   <p className="py-8 text-center text-sm text-[var(--kaiko-text-muted)]">読み込み中...</p>
+                ) : upcomingRaceIds.has(selectedRace.race_id) ? (
+                  // 出走前レース：馬番・馬名・騎手表示
+                  upcomingRaceHorses.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-[var(--kaiko-text-muted)]">出走馬データがありません</p>
+                  ) : (
+                    upcomingRaceHorses.map(({ horseId, horseName, horseNumber, jockey, popularity }) => (
+                      <button
+                        key={horseId}
+                        onClick={() => { onSelect(horseId, selectedRace.race_id); onClose(); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 border-b border-[var(--kaiko-border)] hover:bg-gray-50 text-left"
+                      >
+                        <span className="text-base font-black text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] w-6 text-right flex-shrink-0">
+                          {horseNumber ?? "—"}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-bold text-[var(--kaiko-text-main)] truncate block">{horseName}</span>
+                          {jockey && <span className="text-[11px] text-[var(--kaiko-text-muted)]">{jockey}</span>}
+                        </div>
+                        {popularity != null && (
+                          <span className="text-[11px] font-bold text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] flex-shrink-0">
+                            {popularity}人気
+                          </span>
+                        )}
+                        <span className="material-symbols-outlined text-[16px] text-[var(--kaiko-text-muted)] flex-shrink-0">chevron_right</span>
+                      </button>
+                    ))
+                  )
                 ) : (
+                  // 過去レース：着順・評価表示
                   raceHorses.map(({ horse, finish_order, eval_tag }) => (
                     <button
                       key={horse.horse_id}

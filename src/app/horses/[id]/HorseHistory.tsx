@@ -16,7 +16,7 @@ const EVAL_TAG_STYLES: Record<EvalTag, { bg: string; text: string; border: strin
   disregard: { bg: "bg-[var(--kaiko-eval-disregard-bg)]", text: "text-[var(--kaiko-eval-disregard-text)]", border: "border-gray-300",   label: "度外視" },
 };
 
-const SURFACE_ICON: Record<string, string> = { "芝": "🌿", "ダート": "🟤" };
+const SURFACE_ICON: Record<string, string> = { "芝": "芝 ", "ダート": "ダート " };
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr);

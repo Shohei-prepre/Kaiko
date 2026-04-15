@@ -381,23 +381,23 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
             <div className="divide-y divide-[var(--kaiko-border)]">
               <div className="flex gap-3 px-4 py-2.5">
                 <span className="material-symbols-outlined text-amber-500 text-[15px] shrink-0 mt-0.5">directions_run</span>
-                <div>
+                <div className="min-w-0">
                   <span className="block text-[9px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider mb-0.5">脚質傾向</span>
-                  <span className="text-[12px] font-bold text-[var(--kaiko-text-main)] leading-snug">{courseChar.runningStyle}</span>
+                  <span className="text-[12px] font-bold text-[var(--kaiko-text-main)] leading-snug line-clamp-2">{courseChar.runningStyle}</span>
                 </div>
               </div>
               <div className="flex gap-3 px-4 py-2.5">
                 <span className="material-symbols-outlined text-blue-500 text-[15px] shrink-0 mt-0.5">grid_view</span>
-                <div>
+                <div className="min-w-0">
                   <span className="block text-[9px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider mb-0.5">枠順傾向</span>
-                  <span className="text-[12px] font-bold text-[var(--kaiko-text-main)] leading-snug">{courseChar.postBias}</span>
+                  <span className="text-[12px] font-bold text-[var(--kaiko-text-main)] leading-snug line-clamp-2">{courseChar.postBias}</span>
                 </div>
               </div>
               <div className="flex gap-3 px-4 py-2.5">
                 <span className="material-symbols-outlined text-emerald-500 text-[15px] shrink-0 mt-0.5">info</span>
-                <div>
+                <div className="min-w-0">
                   <span className="block text-[9px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider mb-0.5">特記</span>
-                  <span className="text-[12px] font-bold text-[var(--kaiko-text-main)] leading-snug">{courseChar.notes}</span>
+                  <span className="text-[12px] font-bold text-[var(--kaiko-text-main)] leading-snug line-clamp-2">{courseChar.notes}</span>
                 </div>
               </div>
             </div>

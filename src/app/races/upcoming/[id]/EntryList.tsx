@@ -164,7 +164,7 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
                     )}
                     <div className="flex items-center gap-1.5 mt-0.5">
                       {entry.jockey && (
-                        <span className="text-[10px] text-[var(--kaiko-text-sub)] font-[family-name:var(--font-rajdhani)] font-bold">
+                        <span className="text-[10px] text-[var(--kaiko-text-sub)] font-[family-name:var(--font-rajdhani)] font-bold truncate max-w-[80px]">
                           {entry.jockey}
                         </span>
                       )}
@@ -240,7 +240,7 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
                     </div>
                     {isExpandable && (
                       <span className="text-[8px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)]">
-                        {isExpanded ? "▲ 閉じる" : "▼ 詳細"}
+                        {isExpanded ? "閉じる ▴" : "詳細を見る ▾"}
                       </span>
                     )}
                   </div>

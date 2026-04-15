@@ -69,11 +69,21 @@ export default function HorseRow({ perf, isFirst = false }: Props) {
             {waku}
           </div>
 
-          {/* 馬名 */}
+          {/* 馬名（タップで馬詳細へ） */}
           <div className="min-w-0">
-            <h3 className="font-bold text-[14px] text-[var(--kaiko-text-main)] leading-tight truncate">
-              {horse?.name ?? "—"}
-            </h3>
+            {horse?.horse_id ? (
+              <Link
+                href={`/horses/${horse.horse_id}`}
+                className="font-bold text-[14px] text-[var(--kaiko-text-main)] leading-tight truncate block hover:text-[var(--kaiko-primary)] active:opacity-70"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {horse.name}
+              </Link>
+            ) : (
+              <h3 className="font-bold text-[14px] text-[var(--kaiko-text-main)] leading-tight truncate">
+                {horse?.name ?? "—"}
+              </h3>
+            )}
             <span className="text-[10px] text-[var(--kaiko-text-sub)] font-[family-name:var(--font-rajdhani)] font-bold block mt-0.5">
               {perf.weight_carried}kg · {perf.position_order ?? "—"}
             </span>

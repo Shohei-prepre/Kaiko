@@ -120,7 +120,15 @@ export default async function RaceDetailPage({ params }: Props) {
         <section className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05),_0_1px_2px_rgba(0,0,0,0.1)] border border-[var(--kaiko-border)] overflow-hidden">
           <div className="h-1 bg-[var(--kaiko-primary)] w-full" />
           <div className="p-5">
-            <h2 className="text-3xl font-black text-[var(--kaiko-text-main)] mb-3 tracking-tight">{race.race_name}</h2>
+            <div className="flex items-start justify-between mb-3">
+              <h2 className="text-3xl font-black text-[var(--kaiko-text-main)] tracking-tight leading-none">
+                {race.race_name}
+              </h2>
+              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-gray-100 border border-gray-300 text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] uppercase tracking-wide ml-2 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block" />
+                終了
+              </span>
+            </div>
             <div className="flex flex-wrap gap-2 mb-4">
               <Badge label={race.grade} style={gradeBadge} />
               <Badge label={race.surface} style={surfaceBadge} />
@@ -225,9 +233,9 @@ export default async function RaceDetailPage({ params }: Props) {
         <div className="pt-2">
           <Link
             href={`/compare`}
-            className="w-full bg-[var(--kaiko-primary)] text-white py-4 rounded-xl font-black text-[14px] font-[family-name:var(--font-rajdhani)] tracking-[0.1em] uppercase flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-all"
+            className="w-full bg-[var(--kaiko-primary)] text-white py-4 rounded-xl font-black text-[14px] font-[family-name:var(--font-noto-sans-jp)] tracking-wider flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-all"
           >
-            Add horse to comparison
+            能力比較に追加する
             <span className="material-symbols-outlined text-xl">arrow_forward</span>
           </Link>
         </div>
