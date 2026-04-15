@@ -340,8 +340,45 @@ export default function RacesClient() {
         ).then(({ data }) => {
           if (cancelled) return;
           clearTimeout(timeout);
-          setVenues(groupByVenue((data ?? []) as Race[]));
-          setLoading(false);
+
+          if (data && (data as Race[]).length > 0) {
+            // 結果データあり：通常表示
+            setVenues(groupByVenue(data as Race[]));
+            setLoading(false);
+          } else {
+            // 結果なし → upcoming_races をフォールバックで確認
+            Promise.resolve(
+              supabase
+                .from("upcoming_races" as never)
+                .select("*")
+                .eq("race_date", dateStr)
+                .order("race_number")
+            ).then(({ data: upData }) => {
+              if (cancelled) return;
+              if (upData && (upData as { race_id: string }[]).length > 0) {
+                type URow = { race_id: string; race_name: string; grade: string; distance: number; surface: string; track: string; race_number: number };
+                const rows = upData as URow[];
+                const map = new Map<string, UpcomingRace[]>();
+                for (const r of rows) {
+                  if (!map.has(r.track)) map.set(r.track, []);
+                  map.get(r.track)!.push({
+                    race_id: r.race_id,
+                    race_number: r.race_number ?? 0,
+                    race_name: r.race_name,
+                    grade: r.grade,
+                    distance: r.distance,
+                    surface: (r.surface as "芝" | "ダート" | "障") ?? "芝",
+                  });
+                }
+                setUpcomingVenues(
+                  Array.from(map.entries()).map(([track, races]) => ({ track, races }))
+                );
+              }
+              setLoading(false);
+            }).catch(() => {
+              if (!cancelled) setLoading(false);
+            });
+          }
         }).catch(() => {
           if (cancelled) return;
           clearTimeout(timeout);
@@ -434,8 +471,8 @@ export default function RacesClient() {
           ))}
         </div>
 
-        {/* 未来レースの注意バナー */}
-        {isFutureDate && (
+        {/* 未来レースの注意バナー（未来日付 or 過去日付で結果未入力の場合） */}
+        {(isFutureDate || upcomingVenues.length > 0) && (
           <div className="mx-4 mb-3 flex items-start gap-2.5 bg-emerald-50 border border-emerald-200 px-3 py-2.5">
             <span className="material-symbols-outlined text-emerald-600 text-[18px] flex-shrink-0 mt-0.5">upcoming</span>
             <div>
@@ -451,8 +488,8 @@ export default function RacesClient() {
             <div className="mx-4 bg-white border border-[var(--kaiko-outline-variant)] p-8 text-center text-sm text-[var(--kaiko-text-muted)]">
               読み込み中...
             </div>
-          ) : isFutureDate ? (
-            // 未来レース：プレビュー表示
+          ) : isFutureDate || upcomingVenues.length > 0 ? (
+            // 未来レース or 結果未入力の過去レース：プレビュー表示
             upcomingVenues.length === 0 ? (
               <div className="mx-4 bg-white border border-[var(--kaiko-outline-variant)] p-8 text-center">
                 <p className="text-sm text-[var(--kaiko-text-muted)]">出走前データがありません</p>
