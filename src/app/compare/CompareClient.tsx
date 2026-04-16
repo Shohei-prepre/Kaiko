@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import HorseLoading from "@/components/HorseLoading";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
@@ -15,7 +16,7 @@ function BackButtonClient() {
       onClick={() => router.back()}
       className="w-8 h-8 flex items-center justify-center active:opacity-60"
     >
-      <span className="material-symbols-outlined text-[var(--kaiko-on-surface-variant)] text-[24px]">
+      <span className="material-symbols-outlined text-white text-[24px]">
         arrow_back
       </span>
     </button>
@@ -256,11 +257,13 @@ async function fetchHorseOption(id: number, fromRaceId?: string): Promise<HorseO
   return { horse: horse as Horse, perfs: ((perfs ?? []) as PerfWithRace[]), raceId, raceMarginMaps };
 }
 
-// 補正値の色クラス
+/**
+ * 補正値の色クラス（ライト背景対応）
+ */
 function corrClass(v: number): string {
-  if (v > 0) return "text-emerald-600";
-  if (v < 0) return "text-red-500";
-  return "text-gray-400";
+  if (v > 0) return "text-[var(--kaiko-tag-green-text)]";
+  if (v < 0) return "text-[var(--kaiko-tag-red-text)]";
+  return "text-[var(--kaiko-text-muted)]";
 }
 
 function formatVal(v: number): string {
@@ -282,10 +285,10 @@ const KANA_ROWS = [
 ];
 
 const EVAL_DOT: Record<string, string> = {
-  below: "bg-emerald-500",
+  below: "bg-emerald-400",
   above: "bg-amber-400",
   fair: "bg-blue-400",
-  disregard: "bg-gray-300",
+  disregard: "bg-black/30",
 };
 
 // レース一覧から「年月 → 週 → レース」への絞り込みロジック
@@ -519,7 +522,7 @@ function HorseSelectModal({
         className="bg-white w-full rounded-t-2xl max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center px-4 py-3 border-b border-[var(--kaiko-border)]">
+        <div className="flex justify-between items-center px-4 py-3 border-b border-black/8">
           {tab === "race" && step !== "months" ? (
             <button
               onClick={() => {
@@ -533,14 +536,14 @@ function HorseSelectModal({
               {step === "horses" ? "レース一覧" : step === "races" ? "週を選択" : "年月を選択"}
             </button>
           ) : (
-            <h3 className="font-bold text-[var(--kaiko-text-main)]">馬を選択</h3>
+            <h3 className="font-bold text-[#131313]">馬を選択</h3>
           )}
           <button onClick={onClose}>
             <span className="material-symbols-outlined text-[var(--kaiko-text-muted)]">close</span>
           </button>
         </div>
 
-        <div className="flex border-b border-[var(--kaiko-border)]">
+        <div className="flex border-b border-black/8">
           {/* 「同じレースから」タブ: horseA.raceId がある場合のみ表示 */}
           {horseA?.raceId && (
             <button
@@ -579,13 +582,13 @@ function HorseSelectModal({
         {/* 「同じレースから」タブパネル */}
         {tab === "same" && horseA?.raceId && (
           <div className="overflow-y-auto flex-1">
-            <div className="px-4 py-2 bg-gray-50 border-b border-[var(--kaiko-border)]">
-              <p className="text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase font-[family-name:var(--font-rajdhani)] tracking-wider">
+            <div className="px-4 py-2 bg-black/4 border-b border-black/8">
+              <p className="text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase tracking-wider">
                 同じレースの出走馬
               </p>
             </div>
             {sameRaceLoading ? (
-              <p className="py-8 text-center text-sm text-[var(--kaiko-text-muted)]">読み込み中...</p>
+              <HorseLoading size={80} />
             ) : sameRaceHorses.length === 0 ? (
               <p className="py-8 text-center text-sm text-[var(--kaiko-text-muted)]">
                 同レースの出走馬データがありません
@@ -595,15 +598,15 @@ function HorseSelectModal({
                 <button
                   key={horseId}
                   onClick={() => { onSelect(horseId, horseA.raceId); onClose(); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 border-b border-[var(--kaiko-border)] hover:bg-gray-50 text-left active:bg-gray-100"
+                  className="w-full flex items-center gap-3 px-4 py-3 border-b border-black/6 hover:bg-black/4 text-left active:bg-black/6"
                 >
                   {/* 馬番 */}
-                  <span className="text-base font-black text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] w-6 text-right flex-shrink-0">
+                  <span className="text-base font-black text-[var(--kaiko-text-muted)] w-6 text-right flex-shrink-0">
                     {horseNumber ?? "—"}
                   </span>
                   {/* 馬名・騎手 */}
                   <div className="flex-1 min-w-0">
-                    <span className="text-sm font-bold text-[var(--kaiko-text-main)] block truncate">
+                    <span className="text-sm font-bold text-[#131313] block truncate">
                       {horseName}
                     </span>
                     {jockey && (
@@ -612,7 +615,7 @@ function HorseSelectModal({
                   </div>
                   {/* 人気 */}
                   {popularity != null && (
-                    <span className="text-[11px] font-bold text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] flex-shrink-0">
+                    <span className="text-[11px] font-bold text-[var(--kaiko-text-muted)] flex-shrink-0">
                       {popularity}人気
                     </span>
                   )}
@@ -630,11 +633,11 @@ function HorseSelectModal({
             {/* Step 1: 年月選択 */}
             {step === "months" && (
               <>
-                <div className="px-4 py-2 bg-gray-50 border-b border-[var(--kaiko-border)]">
-                  <p className="text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase font-[family-name:var(--font-rajdhani)] tracking-wider">年月を選択</p>
+                <div className="px-4 py-2 bg-black/4 border-b border-black/8">
+                  <p className="text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase tracking-wider">年月を選択</p>
                 </div>
                 {races.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-[var(--kaiko-text-muted)]">読み込み中...</p>
+                  <HorseLoading size={80} />
                 ) : (
                   yearMonths.map((ym) => {
                     const [year, month] = ym.split("-");
@@ -643,13 +646,13 @@ function HorseSelectModal({
                       <button
                         key={ym}
                         onClick={() => setSelectedYearMonth(ym)}
-                        className="w-full flex items-center justify-between px-4 py-3.5 border-b border-[var(--kaiko-border)] hover:bg-gray-50 text-left"
+                        className="w-full flex items-center justify-between px-4 py-3.5 border-b border-black/6 hover:bg-black/4 text-left"
                       >
-                        <span className="text-sm font-bold text-[var(--kaiko-text-main)]">
+                        <span className="text-sm font-bold text-[#131313]">
                           {year}年 {parseInt(month)}月
                         </span>
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)]">
+                          <span className="text-[11px] text-[var(--kaiko-text-muted)]">
                             {count} races
                           </span>
                           <span className="material-symbols-outlined text-[16px] text-[var(--kaiko-text-muted)]">chevron_right</span>
@@ -664,8 +667,8 @@ function HorseSelectModal({
             {/* Step 2: 週選択 */}
             {step === "weeks" && selectedYearMonth && (
               <>
-                <div className="px-4 py-2 bg-gray-50 border-b border-[var(--kaiko-border)]">
-                  <p className="text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase font-[family-name:var(--font-rajdhani)] tracking-wider">
+                <div className="px-4 py-2 bg-black/4 border-b border-black/8">
+                  <p className="text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase tracking-wider">
                     週を選択 — {selectedYearMonth.replace("-", "年")}月
                   </p>
                 </div>
@@ -675,11 +678,11 @@ function HorseSelectModal({
                     <button
                       key={key}
                       onClick={() => setSelectedWeekKey(key)}
-                      className="w-full flex items-center justify-between px-4 py-3.5 border-b border-[var(--kaiko-border)] hover:bg-gray-50 text-left"
+                      className="w-full flex items-center justify-between px-4 py-3.5 border-b border-black/6 hover:bg-black/4 text-left"
                     >
-                      <span className="text-sm font-bold text-[var(--kaiko-text-main)]">{label}</span>
+                      <span className="text-sm font-bold text-[#131313]">{label}</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)]">
+                        <span className="text-[11px] text-[var(--kaiko-text-muted)]">
                           {count} races
                         </span>
                         <span className="material-symbols-outlined text-[16px] text-[var(--kaiko-text-muted)]">chevron_right</span>
@@ -693,8 +696,8 @@ function HorseSelectModal({
             {/* Step 3: レース選択 */}
             {step === "races" && selectedWeekKey && (
               <>
-                <div className="px-4 py-2 bg-gray-50 border-b border-[var(--kaiko-border)]">
-                  <p className="text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase font-[family-name:var(--font-rajdhani)] tracking-wider">
+                <div className="px-4 py-2 bg-black/4 border-b border-black/8">
+                  <p className="text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase tracking-wider">
                     レースを選択 — {getWeekLabel(selectedWeekKey + "-01")}
                   </p>
                 </div>
@@ -702,19 +705,19 @@ function HorseSelectModal({
                   <button
                     key={race.race_id}
                     onClick={() => setSelectedRace(race)}
-                    className="w-full flex items-center gap-3 px-4 py-3 border-b border-[var(--kaiko-border)] hover:bg-gray-50 text-left"
+                    className="w-full flex items-center gap-3 px-4 py-3 border-b border-black/6 hover:bg-black/4 text-left"
                   >
                     <div className="flex-shrink-0 text-center min-w-[40px]">
-                      <span className="text-[11px] font-bold text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] block">
+                      <span className="text-[11px] font-bold text-[var(--kaiko-text-muted)] block">
                         {race.race_date ? race.race_date.slice(5).replace("-", "/") : "—"}
                       </span>
                       <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)]">{race.track}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-sm font-bold text-[var(--kaiko-text-main)] truncate block">
+                      <span className="text-sm font-bold text-[#131313] truncate block">
                         {race.race_name}
                       </span>
-                      <span className="text-[11px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] font-bold">
+                      <span className="text-[11px] text-[var(--kaiko-text-muted)] font-bold">
                         {race.grade} · R{race.race_number}
                       </span>
                     </div>
@@ -729,17 +732,17 @@ function HorseSelectModal({
             {/* Step 4: 馬選択 */}
             {step === "horses" && selectedRace && (
               <>
-                <div className="px-4 py-2 bg-gray-50 border-b border-[var(--kaiko-border)]">
+                <div className="px-4 py-2 bg-black/4 border-b border-black/8">
                   <p className="text-[11px] font-bold text-[var(--kaiko-text-muted)]">
                     {selectedRace.race_date?.slice(5).replace("-", "/")} {selectedRace.track}{" "}
                     {selectedRace.race_name}
                     {upcomingRaceIds.has(selectedRace.race_id) && (
-                      <span className="ml-2 text-[9px] text-emerald-600 font-bold uppercase font-[family-name:var(--font-rajdhani)] tracking-wider">UPCOMING</span>
+                      <span className="ml-2 text-[9px] text-[var(--kaiko-primary)] font-bold uppercase tracking-wider">UPCOMING</span>
                     )}
                   </p>
                 </div>
                 {raceLoading ? (
-                  <p className="py-8 text-center text-sm text-[var(--kaiko-text-muted)]">読み込み中...</p>
+                  <HorseLoading size={80} />
                 ) : upcomingRaceIds.has(selectedRace.race_id) ? (
                   // 出走前レース：馬番・馬名・騎手表示
                   upcomingRaceHorses.length === 0 ? (
@@ -749,17 +752,17 @@ function HorseSelectModal({
                       <button
                         key={horseId}
                         onClick={() => { onSelect(horseId, selectedRace.race_id); onClose(); }}
-                        className="w-full flex items-center gap-3 px-4 py-3 border-b border-[var(--kaiko-border)] hover:bg-gray-50 text-left"
+                        className="w-full flex items-center gap-3 px-4 py-3 border-b border-black/6 hover:bg-black/4 text-left"
                       >
-                        <span className="text-base font-black text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] w-6 text-right flex-shrink-0">
+                        <span className="text-base font-black text-[var(--kaiko-text-muted)] w-6 text-right flex-shrink-0">
                           {horseNumber ?? "—"}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <span className="text-sm font-bold text-[var(--kaiko-text-main)] truncate block">{horseName}</span>
+                          <span className="text-sm font-bold text-[#131313] truncate block">{horseName}</span>
                           {jockey && <span className="text-[11px] text-[var(--kaiko-text-muted)]">{jockey}</span>}
                         </div>
                         {popularity != null && (
-                          <span className="text-[11px] font-bold text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] flex-shrink-0">
+                          <span className="text-[11px] font-bold text-[var(--kaiko-text-muted)] flex-shrink-0">
                             {popularity}人気
                           </span>
                         )}
@@ -773,13 +776,13 @@ function HorseSelectModal({
                     <button
                       key={horse.horse_id}
                       onClick={() => { onSelect(horse.horse_id, selectedRace.race_id); onClose(); }}
-                      className="w-full flex items-center gap-3 px-4 py-3 border-b border-[var(--kaiko-border)] hover:bg-gray-50 text-left"
+                      className="w-full flex items-center gap-3 px-4 py-3 border-b border-black/6 hover:bg-black/4 text-left"
                     >
-                      <span className="text-base font-black text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] w-6 text-right flex-shrink-0">
+                      <span className="text-base font-black text-[var(--kaiko-text-muted)] w-6 text-right flex-shrink-0">
                         {finish_order === 99 ? "中" : finish_order}
                       </span>
-                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${EVAL_DOT[eval_tag] ?? "bg-gray-300"}`} />
-                      <span className="text-sm font-bold text-[var(--kaiko-text-main)]">{horse.name}</span>
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${EVAL_DOT[eval_tag] ?? "bg-black/30"}`} />
+                      <span className="text-sm font-bold text-[#131313]">{horse.name}</span>
                     </button>
                   ))
                 )}
@@ -790,7 +793,7 @@ function HorseSelectModal({
 
         {tab === "name" && (
           <>
-            <div className="flex gap-1 px-3 py-2 border-b border-[var(--kaiko-border)] overflow-x-auto no-scrollbar">
+            <div className="flex gap-1 px-3 py-2 border-b border-black/8 overflow-x-auto no-scrollbar">
               {KANA_ROWS.map(({ label }) => (
                 <button
                   key={label}
@@ -798,31 +801,33 @@ function HorseSelectModal({
                   className={`flex-shrink-0 w-8 h-8 rounded-full text-[12px] font-bold transition-colors ${
                     activeRow === label
                       ? "bg-[var(--kaiko-primary)] text-white"
-                      : "bg-gray-100 text-[var(--kaiko-text-muted)]"
+                      : "bg-black/6 text-[#6A6B61]"
                   }`}
                 >
                   {label}
                 </button>
               ))}
             </div>
-            <div className="px-3 py-2 border-b border-[var(--kaiko-border)]">
+            <div className="px-3 py-2 border-b border-black/8">
               <input
-                className="w-full border border-[var(--kaiko-border)] rounded-xl px-3 py-2 text-sm outline-none focus:border-[var(--kaiko-primary)]"
+                className="w-full bg-black/4 border border-black/8 rounded-xl px-3 py-2 text-sm text-[#131313] outline-none focus:border-[var(--kaiko-primary)] placeholder:text-[#6A6B61]"
                 placeholder="馬名で絞り込み..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
             </div>
-            <div className="overflow-y-auto flex-1 divide-y divide-[var(--kaiko-border)]">
+            <div className="overflow-y-auto flex-1 divide-y divide-black/8">
               {filteredHorses.length === 0 ? (
-                <p className="py-8 text-center text-sm text-[var(--kaiko-text-muted)]">
-                  {allHorses.length === 0 ? "読み込み中..." : "見つかりませんでした"}
-                </p>
+                allHorses.length === 0 ? (
+                  <HorseLoading size={80} />
+                ) : (
+                  <p className="py-8 text-center text-sm text-[var(--kaiko-text-muted)]">見つかりませんでした</p>
+                )
               ) : (
                 filteredHorses.map((h) => (
                   <button
                     key={h.horse_id}
-                    className="w-full text-left px-4 py-3 text-sm font-bold hover:bg-gray-50"
+                    className="w-full text-left px-4 py-3 text-sm font-bold text-[#131313] hover:bg-black/4"
                     onClick={() => { onSelect(h.horse_id); onClose(); }}
                   >
                     {h.name}
@@ -856,13 +861,13 @@ function BenchmarkSelectModal({
         className="bg-white w-full rounded-t-2xl max-h-[60vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center px-4 py-3 border-b border-[var(--kaiko-border)]">
-          <h3 className="font-bold text-[var(--kaiko-text-main)]">物差し馬を選択</h3>
+        <div className="flex justify-between items-center px-4 py-3 border-b border-black/8">
+          <h3 className="font-bold text-[#131313]">物差し馬を選択</h3>
           <button onClick={onClose}>
             <span className="material-symbols-outlined text-[var(--kaiko-text-muted)]">close</span>
           </button>
         </div>
-        <div className="overflow-y-auto flex-1 divide-y divide-[var(--kaiko-border)]">
+        <div className="overflow-y-auto flex-1 divide-y divide-black/8">
           {candidates.map((c) => {
             const isSelected = selectedId === c.horseId;
             return (
@@ -870,18 +875,18 @@ function BenchmarkSelectModal({
                 key={c.horseId}
                 onClick={() => { onSelect(c); onClose(); }}
                 className={`w-full flex items-center justify-between px-4 py-3 text-left ${
-                  isSelected ? "bg-[var(--kaiko-primary-container)]" : "hover:bg-gray-50"
+                  isSelected ? "bg-[var(--kaiko-primary-container)]" : "hover:bg-black/4"
                 }`}
               >
                 <div>
                   <span
                     className={`text-sm font-bold block ${
-                      isSelected ? "text-[var(--kaiko-primary)]" : "text-[var(--kaiko-on-surface)]"
+                      isSelected ? "text-[var(--kaiko-primary)]" : "text-[#131313]"
                     }`}
                   >
                     {c.horseName}
                   </span>
-                  <span className="text-[10px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)]">
+                  <span className="text-[10px] text-[var(--kaiko-text-muted)]">
                     {c.raceCount}レース経由 · 推定差 {formatVal(c.estimatedDiff)} 馬身
                   </span>
                 </div>
@@ -993,39 +998,37 @@ export default function CompareClient() {
   return (
     <>
       {/* ヘッダー */}
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-100 flex justify-between items-center w-full px-4 h-16">
+      <header className="sticky top-0 z-40 bg-[#131313] border-b border-white/10 flex justify-between items-center w-full px-4 h-14">
         <div className="flex items-center gap-3">
           <BackButtonClient />
-          <h1 className="text-base font-bold text-[var(--kaiko-on-surface)]">能力比較</h1>
+          <h1 className="text-base font-bold text-white">能力比較</h1>
         </div>
-        <div className="flex items-center gap-1">
-          <span className="font-bold text-lg text-[var(--kaiko-primary)] tracking-tight font-[family-name:var(--font-noto-sans-jp)]">
-            回顧AI
-          </span>
-          <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-xl">analytics</span>
-        </div>
+        <Link href="/" className="flex items-baseline gap-0.5">
+          <span className="text-xl font-[family-name:var(--font-noto-sans-jp)] font-black tracking-tighter text-white">回顧</span>
+          <span className="text-xl font-[family-name:var(--font-noto-sans-jp)] font-black text-[var(--kaiko-primary)] italic">AI</span>
+        </Link>
       </header>
 
-      <main className="p-4 max-w-md mx-auto pb-28 space-y-4">
+      <main className="p-4 max-w-2xl mx-auto pb-28 space-y-4">
 
         {/* 馬A vs 馬B */}
         <section className="flex items-stretch gap-3 relative">
-          <div className="flex-1 bg-white border border-[var(--kaiko-outline-variant)] rounded-xl p-3 shadow-sm flex flex-col justify-between min-h-[110px]">
+          <div className="flex-1 bg-white border border-black/8 rounded-xl p-5 flex flex-col justify-between min-h-[140px]">
             <div>
               <span className="text-[10px] font-bold text-[var(--kaiko-primary)] block mb-1">比較馬 A</span>
-              <h2 className="text-base font-bold leading-tight line-clamp-2 text-[var(--kaiko-on-surface)]">
+              <h2 className="text-base font-bold leading-tight line-clamp-2 text-[#131313]">
                 {horseA ? (
                   <Link href={`/horses/${horseA.horse.horse_id}`} className="hover:underline">
                     {horseA.horse.name}
                   </Link>
                 ) : (
-                  <span className="text-[var(--kaiko-on-surface-variant)]">未選択</span>
+                  <span className="text-[var(--kaiko-text-muted)]">未選択</span>
                 )}
               </h2>
             </div>
             <button
               onClick={() => setModal("A")}
-              className="mt-2 flex items-center justify-center gap-1 border border-[var(--kaiko-outline-variant)] rounded-full py-1 text-[10px] font-bold text-[var(--kaiko-on-surface-variant)] w-full hover:bg-gray-50"
+              className="mt-2 flex items-center justify-center gap-1 border border-black/8 rounded-full py-1 text-[10px] font-bold text-[var(--kaiko-text-muted)] w-full hover:bg-black/4"
             >
               <span>変更</span>
               <span className="material-symbols-outlined text-[14px]">swap_horiz</span>
@@ -1034,29 +1037,29 @@ export default function CompareClient() {
 
           {/* VS バッジ */}
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-            <div className="bg-[#2c313a] text-white text-[11px] font-black w-9 h-9 rounded-full flex items-center justify-center border-[3px] border-[var(--kaiko-surface)] italic shadow-md">
+            <div className="bg-black/8 text-[#131313] text-[11px] font-black w-9 h-9 rounded-full flex items-center justify-center border-2 border-black/8 italic">
               VS
             </div>
           </div>
 
-          <div className="flex-1 bg-white border border-[var(--kaiko-outline-variant)] rounded-xl p-3 shadow-sm flex flex-col justify-between min-h-[110px]">
+          <div className="flex-1 bg-white border border-black/8 rounded-xl p-5 flex flex-col justify-between min-h-[140px]">
             <div>
-              <span className="text-[10px] font-bold text-[var(--kaiko-on-surface-variant)] block mb-1">
+              <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] block mb-1">
                 比較馬 B
               </span>
-              <h2 className="text-base font-bold leading-tight line-clamp-2 text-[var(--kaiko-on-surface)]">
+              <h2 className="text-base font-bold leading-tight line-clamp-2 text-[#131313]">
                 {horseB ? (
                   <Link href={`/horses/${horseB.horse.horse_id}`} className="hover:underline">
                     {horseB.horse.name}
                   </Link>
                 ) : (
-                  <span className="text-[var(--kaiko-on-surface-variant)]">未選択</span>
+                  <span className="text-[var(--kaiko-text-muted)]">未選択</span>
                 )}
               </h2>
             </div>
             <button
               onClick={() => setModal("B")}
-              className="mt-2 flex items-center justify-center gap-1 border border-[var(--kaiko-outline-variant)] rounded-full py-1 text-[10px] font-bold text-[var(--kaiko-on-surface-variant)] w-full hover:bg-gray-50"
+              className="mt-2 flex items-center justify-center gap-1 border border-black/8 rounded-full py-1 text-[10px] font-bold text-[var(--kaiko-text-muted)] w-full hover:bg-black/4"
             >
               <span>変更</span>
               <span className="material-symbols-outlined text-[14px]">swap_horiz</span>
@@ -1066,12 +1069,12 @@ export default function CompareClient() {
 
         {/* 物差し馬セレクター（直接対決がない場合のみ） */}
         {horseA && horseB && !directResult && (
-          <section className="bg-[#f8f9fa] border border-[var(--kaiko-outline-variant)] rounded-xl p-3">
+          <section className="bg-black/4 border border-black/8 rounded-2xl p-3">
             <div className="flex items-center gap-2 mb-2">
               <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-[16px]">
                 straighten
               </span>
-              <span className="text-[10px] font-bold text-[var(--kaiko-on-surface-variant)] uppercase font-[family-name:var(--font-rajdhani)] tracking-wider">
+              <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase tracking-wider">
                 物差し馬
               </span>
             </div>
@@ -1086,19 +1089,19 @@ export default function CompareClient() {
             ) : (
               <button
                 onClick={() => setShowBenchmarkModal(true)}
-                className="w-full flex items-center justify-between bg-white border border-[var(--kaiko-border)] rounded-lg px-3 py-2 hover:bg-gray-50 active:opacity-70 transition-opacity"
+                className="w-full flex items-center justify-between bg-black/6 border border-black/8 rounded-2xl px-3 py-2 hover:bg-black/8 active:opacity-70 transition-opacity"
               >
                 <div className="text-left">
-                  <span className="text-sm font-bold text-[var(--kaiko-on-surface)] block">
+                  <span className="text-sm font-bold text-[#131313] block">
                     {selectedBenchmark?.horseName ?? "—"}
                   </span>
                   {selectedBenchmark && (
-                    <span className="text-[10px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)]">
+                    <span className="text-[10px] text-[var(--kaiko-text-muted)]">
                       {selectedBenchmark.raceCount}レース経由 · 候補{benchmarkCandidates.length}頭
                     </span>
                   )}
                 </div>
-                <span className="material-symbols-outlined text-[var(--kaiko-on-surface-variant)] text-[18px]">
+                <span className="material-symbols-outlined text-[var(--kaiko-text-muted)] text-[18px]">
                   expand_more
                 </span>
               </button>
@@ -1109,16 +1112,16 @@ export default function CompareClient() {
         {/* サマリー */}
         {horseA && horseB ? (
           diff !== null ? (
-            <section className="bg-white rounded-2xl p-6 text-center space-y-4 shadow-sm border border-[var(--kaiko-outline-variant)] relative overflow-hidden">
-              <div className="absolute top-0 w-full h-1 bg-[var(--kaiko-primary)]/10 left-0" />
-              <p className="text-xs font-bold text-[var(--kaiko-on-surface-variant)] tracking-wider">
+            <section className="bg-white rounded-3xl p-6 text-center space-y-4 border border-black/8 relative overflow-hidden">
+              <div className="absolute top-0 w-full h-1 bg-[var(--kaiko-primary)]/20 left-0" />
+              <p className="text-xs font-bold text-[var(--kaiko-text-muted)] tracking-wider">
                 もし直接対決したら
               </p>
               <div className="flex items-baseline justify-center gap-2">
-                <span className="font-[family-name:var(--font-bebas-neue)] text-6xl text-[var(--kaiko-primary)] leading-none tracking-tight">
+                <span className="text-6xl font-black text-[var(--kaiko-primary)] leading-none tracking-tight">
                   {formatVal(Math.abs(diff))}
                 </span>
-                <span className="text-lg font-bold text-[var(--kaiko-on-surface)]">馬身</span>
+                <span className="text-lg font-bold text-[#131313]">馬身</span>
               </div>
               <div className="flex items-center justify-center gap-2">
                 <div className="inline-flex items-center gap-2 bg-[var(--kaiko-primary-container)] px-6 py-2.5 rounded-full">
@@ -1140,14 +1143,14 @@ export default function CompareClient() {
               )}
             </section>
           ) : !directResult && !benchmarkLoading && benchmarkCandidates.length === 0 ? (
-            <section className="bg-white rounded-2xl p-6 text-center shadow-sm border border-[var(--kaiko-outline-variant)]">
+            <section className="bg-white rounded-3xl p-6 text-center border border-black/8">
               <span
                 className="material-symbols-outlined text-[var(--kaiko-text-muted)] text-3xl mb-2 block"
                 style={{ fontVariationSettings: "'FILL' 1" }}
               >
                 search_off
               </span>
-              <p className="text-sm font-bold text-[var(--kaiko-on-surface-variant)]">
+              <p className="text-sm font-bold text-[var(--kaiko-text-muted)]">
                 共通レースが見つかりません
               </p>
               <p className="text-[11px] text-[var(--kaiko-text-muted)] mt-1">
@@ -1155,28 +1158,28 @@ export default function CompareClient() {
               </p>
             </section>
           ) : benchmarkLoading ? (
-            <section className="bg-white rounded-2xl p-6 text-center shadow-sm border border-[var(--kaiko-outline-variant)]">
-              <p className="text-sm text-[var(--kaiko-on-surface-variant)]">物差し馬を検索中...</p>
+            <section className="bg-white rounded-3xl p-6 text-center border border-black/8">
+              <HorseLoading size={100} />
             </section>
           ) : null
         ) : (
-          <section className="bg-white rounded-2xl p-6 text-center shadow-sm border border-[var(--kaiko-outline-variant)]">
-            <p className="text-sm text-[var(--kaiko-on-surface-variant)]">馬A・馬Bを選択してください</p>
+          <section className="bg-white rounded-3xl p-6 text-center border border-black/8">
+            <p className="text-sm text-[var(--kaiko-text-muted)]">馬A・馬Bを選択してください</p>
           </section>
         )}
 
         {/* 補正詳細タブ（直接対決のみ） */}
         {tabRaces.length > 0 && (
           <>
-            <nav className="flex gap-1 bg-gray-200/40 p-1 rounded-full">
+            <nav className="flex gap-1 bg-black/6 p-1 rounded-full">
               {tabs.map((label, i) => (
                 <button
                   key={i}
                   onClick={() => setActiveTab(i)}
                   className={`flex-1 py-2.5 px-2 text-xs font-bold rounded-full transition-all ${
                     activeTab === i
-                      ? "bg-[var(--kaiko-primary)] text-white shadow-md"
-                      : "text-[var(--kaiko-on-surface-variant)]"
+                      ? "bg-[var(--kaiko-primary)] text-white"
+                      : "text-[#6A6B61]"
                   }`}
                 >
                   {label}
@@ -1184,20 +1187,20 @@ export default function CompareClient() {
               ))}
             </nav>
 
-            <section className="bg-white rounded-2xl overflow-hidden shadow-sm border border-[var(--kaiko-outline-variant)]">
-              <div className="bg-[var(--kaiko-surface-container-low)] px-4 py-3 border-b border-[var(--kaiko-outline-variant)]/30">
-                <h3 className="font-bold text-[12px] uppercase tracking-wider text-[var(--kaiko-on-surface-variant)]">
+            <section className="bg-white rounded-3xl overflow-hidden border border-black/8">
+              <div className="bg-black/4 px-4 py-3 border-b border-black/8">
+                <h3 className="font-bold text-[12px] uppercase tracking-wider text-[var(--kaiko-text-muted)]">
                   能力補正詳細
                 </h3>
               </div>
-              <div className="divide-y divide-[var(--kaiko-outline-variant)]/30">
+              <div className="divide-y divide-black/8">
 
                 {/* ベース着差 */}
                 <div className="flex items-center justify-between px-4 py-3">
-                  <span className="text-[11px] font-medium text-[var(--kaiko-on-surface-variant)]">
+                  <span className="text-[11px] font-medium text-[var(--kaiko-text-muted)]">
                     実際の着差（ベース）
                   </span>
-                  <span className="font-[family-name:var(--font-bebas-neue)] text-2xl text-[var(--kaiko-on-surface)]">
+                  <span className="text-2xl font-black text-[#131313]">
                     {tabRace
                       ? formatVal(tabRace.baseDiff)
                       : formatVal(avgRawDiff)}
@@ -1207,12 +1210,12 @@ export default function CompareClient() {
                 {/* 補正項目テーブル（A・B並列） */}
                 <div>
                   {/* ヘッダー */}
-                  <div className="grid grid-cols-3 px-4 py-1.5 bg-gray-50 border-b border-[var(--kaiko-outline-variant)]/30">
+                  <div className="grid grid-cols-3 px-4 py-1.5 bg-black/4 border-b border-black/8">
                     <span className="text-[9px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider">補正項目</span>
                     <span className="text-[9px] font-black text-[var(--kaiko-primary)] uppercase tracking-wider text-center">
                       {horseA?.horse.name ?? "馬A"}
                     </span>
-                    <span className="text-[9px] font-black text-[var(--kaiko-on-surface-variant)] uppercase tracking-wider text-center">
+                    <span className="text-[9px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider text-center">
                       {horseB?.horse.name ?? "馬B"}
                     </span>
                   </div>
@@ -1224,14 +1227,14 @@ export default function CompareClient() {
                       ? ((tabRace.perfB[item.key] as number) ?? 0)
                       : (avgCorrB[item.key as string] ?? 0);
                     return (
-                      <div key={item.key as string} className="grid grid-cols-3 px-4 py-2.5 border-b border-[var(--kaiko-outline-variant)]/20 last:border-b-0">
-                        <span className="text-[10px] font-bold text-[var(--kaiko-on-surface-variant)] self-center">
+                      <div key={item.key as string} className="grid grid-cols-3 px-4 py-2.5 border-b border-black/6 last:border-b-0">
+                        <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] self-center">
                           {item.label}
                         </span>
-                        <span className={`font-[family-name:var(--font-bebas-neue)] text-lg text-center ${corrClass(valA)}`}>
+                        <span className={`text-lg font-black text-center ${corrClass(valA)}`}>
                           {formatVal(valA)}
                         </span>
-                        <span className={`font-[family-name:var(--font-bebas-neue)] text-lg text-center ${corrClass(valB)}`}>
+                        <span className={`text-lg font-black text-center ${corrClass(valB)}`}>
                           {formatVal(valB)}
                         </span>
                       </div>
@@ -1243,9 +1246,9 @@ export default function CompareClient() {
                       ? (tabRace.perfA.races.track_bias_value ?? 0)
                       : avgBias;
                     return (
-                      <div className="grid grid-cols-3 px-4 py-2.5 bg-gray-50/60">
-                        <span className="text-[10px] font-bold text-[var(--kaiko-on-surface-variant)] self-center">コースバイアス</span>
-                        <span className={`font-[family-name:var(--font-bebas-neue)] text-lg text-center ${corrClass(bias)}`}>
+                      <div className="grid grid-cols-3 px-4 py-2.5 bg-black/4">
+                        <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] self-center">コースバイアス</span>
+                        <span className={`text-lg font-black text-center ${corrClass(bias)}`}>
                           {formatVal(bias)}
                         </span>
                         <span className="text-[11px] text-center text-[var(--kaiko-text-muted)] self-center">（共通）</span>
@@ -1255,10 +1258,10 @@ export default function CompareClient() {
                 </div>
 
                 {/* 補正後の能力差 */}
-                <div className="flex items-center justify-between p-5 bg-[var(--kaiko-primary)]/5">
+                <div className="flex items-center justify-between p-5 bg-[var(--kaiko-primary)]/8">
                   <span className="font-bold text-[var(--kaiko-primary)] text-sm">補正後の能力差</span>
                   <div className="text-right">
-                    <span className="font-[family-name:var(--font-bebas-neue)] text-3xl text-[var(--kaiko-primary)] leading-none">
+                    <span className="text-3xl font-black text-[var(--kaiko-primary)] leading-none">
                       {formatVal(directDiff ?? 0)}
                     </span>
                     <span className="text-xs font-bold text-[var(--kaiko-primary)] ml-1.5">馬身</span>
@@ -1271,9 +1274,9 @@ export default function CompareClient() {
               <div className="pt-2 pb-6">
                 <Link
                   href={`/races/${tabRace.perfA.race_id}`}
-                  className="w-full bg-[var(--kaiko-on-surface)] text-white py-4 rounded-2xl flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-[0.98] shadow-lg shadow-black/5"
+                  className="w-full bg-[var(--kaiko-primary)] text-white py-4 rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all font-black text-[14px]"
                 >
-                  <span className="font-bold text-sm tracking-tight">レース詳細へ戻る</span>
+                  <span>レース詳細へ戻る</span>
                   <span className="material-symbols-outlined text-xl">arrow_forward</span>
                 </Link>
               </div>

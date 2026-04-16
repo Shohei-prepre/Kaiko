@@ -13,7 +13,7 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[var(--kaiko-outline-variant)] h-20 pb-4 flex items-end">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#131313] border-t-0 h-20 pb-4 flex items-end">
       <div className="flex w-full">
         {tabs.map((tab) => {
           const isActive = pathname.startsWith(tab.href);
@@ -21,10 +21,10 @@ export default function BottomNav() {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex flex-1 flex-col items-center gap-0.5 pt-2 text-[10px] font-[family-name:var(--font-rajdhani)] font-bold uppercase tracking-wider transition-colors ${
+              className={`flex flex-1 flex-col items-center gap-0.5 pt-2 text-[10px] font-bold uppercase tracking-wider transition-colors ${
                 isActive
-                  ? "text-[var(--kaiko-primary)]"
-                  : "text-[var(--kaiko-on-surface-variant)] opacity-60"
+                  ? "text-white"
+                  : "text-[var(--kaiko-text-muted)]"
               }`}
             >
               <span
@@ -34,7 +34,7 @@ export default function BottomNav() {
               </span>
               {tab.label}
               {isActive && (
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--kaiko-primary)] mt-0.5" />
+                <span className="w-4 h-0.5 rounded-full bg-[var(--kaiko-primary)] mt-0.5" />
               )}
             </Link>
           );

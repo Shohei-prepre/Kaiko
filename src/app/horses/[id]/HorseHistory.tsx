@@ -10,10 +10,10 @@ interface PerformanceWithRace extends HorsePerformance {
 }
 
 const EVAL_TAG_STYLES: Record<EvalTag, { bg: string; text: string; border: string; label: string }> = {
-  fair:      { bg: "bg-[var(--kaiko-eval-neutral-bg)]",   text: "text-[var(--kaiko-eval-neutral-text)]",   border: "border-blue-200",   label: "実力通り" },
-  below:     { bg: "bg-[var(--kaiko-eval-positive-bg)]",  text: "text-[var(--kaiko-eval-positive-text)]",  border: "border-emerald-200",label: "実力以下" },
-  above:     { bg: "bg-[var(--kaiko-eval-warning-bg)]",   text: "text-[var(--kaiko-eval-warning-text)]",   border: "border-amber-200",  label: "実力以上" },
-  disregard: { bg: "bg-[var(--kaiko-eval-disregard-bg)]", text: "text-[var(--kaiko-eval-disregard-text)]", border: "border-gray-300",   label: "度外視" },
+  fair:      { bg: "bg-[var(--kaiko-eval-neutral-bg)]",   text: "text-[var(--kaiko-eval-neutral-text)]",   border: "border-[var(--kaiko-eval-neutral-text)]/30",   label: "実力通り" },
+  below:     { bg: "bg-[var(--kaiko-eval-positive-bg)]",  text: "text-[var(--kaiko-eval-positive-text)]",  border: "border-[var(--kaiko-eval-positive-text)]/30",  label: "ラッキー" },
+  above:     { bg: "bg-[var(--kaiko-eval-warning-bg)]",   text: "text-[var(--kaiko-eval-warning-text)]",   border: "border-[var(--kaiko-eval-warning-text)]/30",   label: "伸び代◎" },
+  disregard: { bg: "bg-[var(--kaiko-eval-disregard-bg)]", text: "text-[var(--kaiko-eval-disregard-text)]", border: "border-black/8",                              label: "度外視" },
 };
 
 const SURFACE_ICON: Record<string, string> = { "芝": "芝 ", "ダート": "ダート " };
@@ -28,9 +28,9 @@ function formatVal(v: number): string {
 }
 
 function corrClass(v: number): string {
-  if (v > 0) return "text-emerald-600";
-  if (v < 0) return "text-red-500";
-  return "text-gray-400";
+  if (v > 0) return "text-[var(--kaiko-tag-green-text)]";
+  if (v < 0) return "text-[var(--kaiko-tag-red-text)]";
+  return "text-[#6A6B61]";
 }
 
 interface Props {
@@ -71,25 +71,25 @@ export default function HorseHistory({ perfs }: Props) {
         ];
 
         return (
-          <div key={perf.id} className={i < perfs.length - 1 ? "border-b border-[var(--kaiko-border)]" : ""}>
-            {/* メイン行: タップで詳細展開 */}
+          <div key={perf.id} className={i < perfs.length - 1 ? "border-b border-black/6" : ""}>
+            {/* メイン行 */}
             <button
               className="w-full text-left"
               onClick={() => !isDisregard && setExpandedId(isExpanded ? null : perf.id)}
             >
-              <div className={`flex items-center gap-3 px-4 py-4 transition-colors ${!isDisregard ? "hover:bg-gray-50 active:bg-gray-100" : ""}`}>
+              <div className={`flex items-center gap-3 px-4 py-4 transition-colors ${!isDisregard ? "hover:bg-black/4 active:bg-black/5" : ""}`}>
                 {/* 着順 */}
-                <span className={`text-xl font-black font-[family-name:var(--font-rajdhani)] italic leading-none w-7 text-center shrink-0 ${i === 0 ? "text-[var(--kaiko-tag-gold-text)]" : "text-[var(--kaiko-text-muted)]"}`}>
+                <span className={`text-xl font-black italic leading-none w-7 text-center shrink-0 ${i === 0 ? "text-[var(--kaiko-primary)]" : "text-[var(--kaiko-text-muted)]"}`}>
                   {perf.finish_order}
                 </span>
 
                 {/* レース情報 */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5">
-                    <span className="text-[13px] font-bold text-[var(--kaiko-text-main)] truncate">{race.race_name}</span>
-                    <span className="font-[family-name:var(--font-rajdhani)] text-[10px] font-bold text-[var(--kaiko-text-muted)] shrink-0">{race.grade}</span>
+                    <span className="text-[13px] font-bold text-[#131313] truncate">{race.race_name}</span>
+                    <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] shrink-0">{race.grade}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-[10px] text-[var(--kaiko-text-muted)] font-bold font-[family-name:var(--font-rajdhani)]">
+                  <div className="flex items-center gap-2 text-[10px] text-[var(--kaiko-text-muted)] font-bold">
                     <span>{formatDate(race.race_date)}</span>
                     <span>{race.track}</span>
                     <span>{SURFACE_ICON[race.surface]}{race.distance}m</span>
@@ -102,12 +102,12 @@ export default function HorseHistory({ perfs }: Props) {
                     <div className="flex items-center gap-0.5">
                       <span className={`text-[15px] font-black leading-none ${symColor}`}>{symbol}</span>
                       <div className="flex gap-0.5 ml-1">
-                        <div className="bg-gray-50 border border-[var(--kaiko-border)] rounded px-1 py-0.5 flex items-center gap-0.5">
-                          <span className="font-[family-name:var(--font-rajdhani)] text-[7px] font-black text-[var(--kaiko-text-muted)]">適</span>
+                        <div className="bg-black/6 border border-black/8 rounded-lg px-1 py-0.5 flex items-center gap-0.5">
+                          <span className="text-[7px] font-black text-[var(--kaiko-text-muted)]">適</span>
                           <span className={`text-[10px] font-black leading-none ${aptColor}`}>{aptSymbol}</span>
                         </div>
-                        <div className="bg-gray-50 border border-[var(--kaiko-border)] rounded px-1 py-0.5 flex items-center gap-0.5">
-                          <span className="font-[family-name:var(--font-rajdhani)] text-[7px] font-black text-[var(--kaiko-text-muted)]">ロ</span>
+                        <div className="bg-black/6 border border-black/8 rounded-lg px-1 py-0.5 flex items-center gap-0.5">
+                          <span className="text-[7px] font-black text-[var(--kaiko-text-muted)]">ロ</span>
                           <span className={`text-[10px] font-black leading-none ${lossColor}`}>{lossSymbol}</span>
                         </div>
                       </div>
@@ -115,7 +115,7 @@ export default function HorseHistory({ perfs }: Props) {
                   ) : (
                     <span className="text-[15px] font-black text-[var(--kaiko-text-muted)] leading-none">—</span>
                   )}
-                  <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${evalStyle.border} ${evalStyle.bg} ${evalStyle.text} whitespace-nowrap font-[family-name:var(--font-rajdhani)]`}>
+                  <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${evalStyle.border} ${evalStyle.bg} ${evalStyle.text} whitespace-nowrap`}>
                     {evalStyle.label}
                   </span>
                 </div>
@@ -129,61 +129,60 @@ export default function HorseHistory({ perfs }: Props) {
               </div>
             </button>
 
-            {/* 展開パネル: このレースにおける馬の詳細 */}
+            {/* 展開パネル */}
             {isExpanded && !isDisregard && (
-              <div className="px-4 pb-4 pt-1 bg-gray-50/60 space-y-2.5">
-                {/* 馬の詳細サマリーヘッダー */}
+              <div className="px-4 pb-4 pt-1 bg-black/4 space-y-2.5">
                 <div className="flex items-center gap-1.5 mb-1">
                   <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-[14px]">analytics</span>
-                  <span className="text-[10px] font-black text-[var(--kaiko-text-main)] uppercase tracking-wider font-[family-name:var(--font-rajdhani)]">
+                  <span className="text-[10px] font-black text-[#131313] uppercase tracking-wider">
                     このレースの馬詳細
                   </span>
                 </div>
 
-                {/* 馬の基本情報 */}
+                {/* 基本情報 */}
                 <div className="grid grid-cols-3 gap-2">
                   {perf.weight_carried && (
-                    <div className="bg-white border border-[var(--kaiko-border)] rounded-lg p-2 text-center">
-                      <span className="font-[family-name:var(--font-rajdhani)] text-[9px] font-black text-[var(--kaiko-text-muted)] block">斤量</span>
-                      <span className="text-[13px] font-black text-[var(--kaiko-text-main)] font-[family-name:var(--font-rajdhani)]">{perf.weight_carried}kg</span>
+                    <div className="bg-black/6 border border-black/8 rounded-2xl p-2 text-center">
+                      <span className="text-[9px] font-black text-[var(--kaiko-text-muted)] block">斤量</span>
+                      <span className="text-[13px] font-black text-[#131313]">{perf.weight_carried}kg</span>
                     </div>
                   )}
                   {perf.horse_weight && (
-                    <div className="bg-white border border-[var(--kaiko-border)] rounded-lg p-2 text-center">
-                      <span className="font-[family-name:var(--font-rajdhani)] text-[9px] font-black text-[var(--kaiko-text-muted)] block">馬体重</span>
-                      <span className="text-[13px] font-black text-[var(--kaiko-text-main)] font-[family-name:var(--font-rajdhani)]">{perf.horse_weight}</span>
+                    <div className="bg-black/6 border border-black/8 rounded-2xl p-2 text-center">
+                      <span className="text-[9px] font-black text-[var(--kaiko-text-muted)] block">馬体重</span>
+                      <span className="text-[13px] font-black text-[#131313]">{perf.horse_weight}</span>
                     </div>
                   )}
                   {perf.position_order && (
-                    <div className="bg-white border border-[var(--kaiko-border)] rounded-lg p-2 text-center">
-                      <span className="font-[family-name:var(--font-rajdhani)] text-[9px] font-black text-[var(--kaiko-text-muted)] block">通過順</span>
-                      <span className="text-[13px] font-black text-[var(--kaiko-text-main)] font-[family-name:var(--font-rajdhani)]">{perf.position_order}</span>
+                    <div className="bg-black/6 border border-black/8 rounded-2xl p-2 text-center">
+                      <span className="text-[9px] font-black text-[var(--kaiko-text-muted)] block">通過順</span>
+                      <span className="text-[13px] font-black text-[#131313]">{perf.position_order}</span>
                     </div>
                   )}
                 </div>
 
                 {/* 補正値テーブル */}
-                <div className="bg-white border border-[var(--kaiko-border)] rounded-lg overflow-hidden">
+                <div className="bg-black/6 border border-black/8 rounded-2xl overflow-hidden">
                   {CORRECTION_ITEMS.map((item) => {
                     const val = perf[item.key] as number | null ?? 0;
                     const summary = perf[item.summaryKey] as string | null;
                     if (val === 0 && !summary) return null;
                     return (
-                      <div key={item.key as string} className="flex items-center gap-3 px-3 py-2 border-b border-[var(--kaiko-border)] last:border-b-0">
+                      <div key={item.key as string} className="flex items-center gap-3 px-3 py-2 border-b border-black/6 last:border-b-0">
                         <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] w-20 shrink-0">{item.label}</span>
-                        <span className={`font-[family-name:var(--font-rajdhani)] text-[15px] font-black leading-none ${corrClass(val)} shrink-0`}>
+                        <span className={`text-[15px] font-black leading-none ${corrClass(val)} shrink-0`}>
                           {formatVal(val)}
                         </span>
                         {summary && (
-                          <span className="text-[10px] text-[var(--kaiko-text-sub)] leading-snug flex-1">{summary}</span>
+                          <span className="text-[10px] text-[var(--kaiko-text-muted)] leading-snug flex-1">{summary}</span>
                         )}
                       </div>
                     );
                   }).filter(Boolean)}
                   {/* 合計 */}
-                  <div className="flex items-center justify-between px-3 py-2.5 bg-[var(--kaiko-primary)]/5">
+                  <div className="flex items-center justify-between px-3 py-2.5 bg-[var(--kaiko-primary)]/8">
                     <span className="text-[11px] font-bold text-[var(--kaiko-primary)]">補正合計</span>
-                    <span className={`font-[family-name:var(--font-rajdhani)] text-[18px] font-black leading-none ${corrClass(aptValue + lossValue)}`}>
+                    <span className={`text-[18px] font-black leading-none ${corrClass(aptValue + lossValue)}`}>
                       {formatVal(aptValue + lossValue)}
                     </span>
                   </div>
@@ -192,7 +191,7 @@ export default function HorseHistory({ perfs }: Props) {
                 {/* レースへのリンク */}
                 <Link
                   href={`/races/${race.race_id}`}
-                  className="flex items-center justify-between gap-2 bg-white border border-[var(--kaiko-border)] rounded-lg px-3 py-2.5 hover:bg-gray-50 active:opacity-70 transition-opacity"
+                  className="flex items-center justify-between gap-2 bg-black/6 border border-black/8 rounded-2xl px-3 py-2.5 hover:bg-black/8 active:opacity-70 transition-opacity"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center gap-2 min-w-0">

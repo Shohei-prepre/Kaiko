@@ -20,8 +20,6 @@ interface Props {
   params: Promise<{ id: string }>;
 }
 
-// ── データ取得 ──────────────────────────────────────────────────
-
 interface RaceNav {
   race_id: string;
   track: string;
@@ -82,11 +80,10 @@ async function resolveHorseIdsByName(names: string[]): Promise<Map<string, numbe
     for (const h of (data ?? []) as { horse_id: number; name: string }[]) {
       map.set(h.name, h.horse_id);
     }
-  } catch { /* ignore */ }
+  } catch {}
   return map;
 }
 
-/** 通過順位（position_order）の平均先頭ポジションから脚質を推定 */
 function calcRunningStyle(positionOrders: (string | null)[]): string | null {
   const firsts = positionOrders
     .map((p) => {
@@ -146,7 +143,6 @@ async function getRecentPerfsForHorses(
       races: { race_name: string; race_date: string } | null;
     };
 
-    // まず馬ごとに直近5走に絞る（全走から race_ids を収集すると膨大になるため）
     const byHorse = new Map<number, RawPerf[]>();
     for (const row of (data as RawPerf[]).filter((r) => r.races)) {
       if (!byHorse.has(row.horse_id)) byHorse.set(row.horse_id, []);
@@ -160,7 +156,6 @@ async function getRecentPerfsForHorses(
       );
     }
 
-    // 直近5走の race_id だけで累積着差マップを構築
     const uniqueRaceIds = [...new Set(
       [...slicedByHorse.values()].flat().map((p) => p.race_id)
     )];
@@ -179,7 +174,6 @@ async function getRecentPerfsForHorses(
     }
 
     for (const [hid, sorted] of slicedByHorse.entries()) {
-      // 脚質推定（disregard 除外、直近5走の position_order を使用）
       const validPositions = sorted
         .filter((p) => p.eval_tag !== "disregard")
         .map((p) => p.position_order);
@@ -207,14 +201,10 @@ async function getRecentPerfsForHorses(
         })
       );
     }
-  } catch {
-    // テーブルが存在しない場合など
-  }
+  } catch {}
 
   return { perfsMap, runningStyleMap };
 }
-
-// ── ヘルパー ──────────────────────────────────────────────────
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr);
@@ -228,20 +218,20 @@ function formatOddsUpdated(iso: string | null): string {
 }
 
 const GRADE_BADGE: Record<string, { border: string; bg: string; text: string }> = {
-  G1: { border: "border-[#e8c060]", bg: "bg-[var(--kaiko-tag-gold-bg)]", text: "text-[var(--kaiko-tag-gold-text)]" },
-  G2: { border: "border-[#e8c060]", bg: "bg-[var(--kaiko-tag-gold-bg)]", text: "text-[var(--kaiko-tag-gold-text)]" },
-  G3: { border: "border-gray-300",  bg: "bg-gray-100",                   text: "text-[var(--kaiko-text-sub)]" },
-  OP: { border: "border-[var(--kaiko-border)]", bg: "bg-gray-50",        text: "text-[var(--kaiko-text-sub)]" },
+  G1: { border: "border-[var(--kaiko-primary)]/50", bg: "bg-[var(--kaiko-tag-gold-bg)]", text: "text-[var(--kaiko-tag-gold-text)]" },
+  G2: { border: "border-[var(--kaiko-primary)]/30", bg: "bg-[var(--kaiko-tag-gold-bg)]", text: "text-[var(--kaiko-tag-gold-text)]" },
+  G3: { border: "border-black/10", bg: "bg-black/6", text: "text-[var(--kaiko-text-muted)]" },
+  OP: { border: "border-black/8", bg: "bg-black/5",  text: "text-[var(--kaiko-text-muted)]" },
 };
 
 const SURFACE_BADGE: Record<string, { border: string; bg: string; text: string }> = {
-  "芝":    { border: "border-[#80c8a0]", bg: "bg-[var(--kaiko-tag-green-bg)]", text: "text-[var(--kaiko-tag-green-text)]" },
-  "ダート": { border: "border-[#c0a060]", bg: "bg-[var(--kaiko-tag-gold-bg)]",  text: "text-[var(--kaiko-tag-gold-text)]" },
+  "芝":    { border: "border-[var(--kaiko-tag-green-text)]/30", bg: "bg-[var(--kaiko-tag-green-bg)]", text: "text-[var(--kaiko-tag-green-text)]" },
+  "ダート": { border: "border-[var(--kaiko-tag-gold-text)]/30",  bg: "bg-[var(--kaiko-tag-gold-bg)]",  text: "text-[var(--kaiko-tag-gold-text)]" },
 };
 
 function Badge({ label, style }: { label: string; style: { border: string; bg: string; text: string } }) {
   return (
-    <span className={`text-[11px] font-bold px-3 py-1 rounded-full border ${style.border} ${style.bg} ${style.text} font-[family-name:var(--font-rajdhani)] uppercase tracking-wider`}>
+    <span className={`text-[11px] font-bold px-3 py-1 rounded-full border ${style.border} ${style.bg} ${style.text} uppercase tracking-wider`}>
       {label}
     </span>
   );
@@ -257,8 +247,6 @@ const WAKU_STYLES: Record<number, { bg: string; border: string }> = {
   7: { bg: "bg-[#ffedd5]",     border: "border-orange-200" },
   8: { bg: "bg-[#fce7f3]",     border: "border-pink-200" },
 };
-
-// ── ページ本体 ──────────────────────────────────────────────────
 
 export default async function UpcomingRaceDetailPage({ params }: Props) {
   const { id } = await params;
@@ -301,7 +289,6 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
   const surfaceBadge = SURFACE_BADGE[race.surface] ?? SURFACE_BADGE["芝"];
   const courseChar = getCourseCharacteristic(race.track, race.surface, race.distance);
 
-  // Client Componentに渡すためにMapをArrayに変換
   const valueBetArr = Array.from(valueBetMap.entries());
   const picksArr = Array.from(picksMap.entries());
   const runningStyleArr = Array.from(runningStyleMap.entries());
@@ -310,16 +297,16 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
   return (
     <>
       {/* ヘッダー */}
-      <header className="fixed top-0 left-0 w-full z-50 flex items-center px-4 h-14 bg-white border-b border-[var(--kaiko-border)] shadow-sm">
+      <header className="fixed top-0 left-0 w-full z-50 flex items-center px-4 h-14 bg-white border-b border-black/8">
         <div className="flex items-center w-full gap-3">
           <BackButton />
-          <div className="flex items-baseline gap-0.5">
-            <span className="text-xl font-[family-name:var(--font-noto-sans-jp)] font-black tracking-tighter">回顧</span>
+          <Link href="/" className="flex items-baseline gap-0.5">
+            <span className="text-xl font-[family-name:var(--font-noto-sans-jp)] font-black tracking-tighter text-[#131313]">回顧</span>
             <span className="text-xl font-[family-name:var(--font-noto-sans-jp)] font-black text-[var(--kaiko-primary)] italic">AI</span>
-          </div>
+          </Link>
           <div className="flex flex-col leading-tight ml-auto text-right">
-            <span className="text-sm font-bold text-[var(--kaiko-text-main)]">{race.race_name}</span>
-            <span className="text-[10px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] font-bold">
+            <span className="text-sm font-bold text-[#131313]">{race.race_name}</span>
+            <span className="text-[10px] text-[var(--kaiko-text-muted)] font-bold">
               {race.race_date.replace(/-/g, "/")} · {race.track} {race.grade}
             </span>
           </div>
@@ -333,131 +320,71 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
         currentRaceNumber={race.race_number ?? 0}
       />
 
-      <main className="pt-28 px-3 max-w-md mx-auto pb-28 space-y-3">
+      <main className="pt-36 px-3 max-w-md mx-auto pb-28 space-y-3">
 
-        {/* レース概要カード */}
-        <section className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05),_0_1px_2px_rgba(0,0,0,0.1)] border border-[var(--kaiko-border)] overflow-hidden">
-          <div className="h-1 bg-[var(--kaiko-primary)] w-full" />
-          <div className="p-5">
-            <div className="flex items-start justify-between mb-3">
-              <h2 className="text-3xl font-black text-[var(--kaiko-text-main)] tracking-tight leading-none">
-                {race.race_name}
-              </h2>
-              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-blue-50 border border-blue-200 text-[var(--kaiko-primary)] font-[family-name:var(--font-rajdhani)] uppercase tracking-wide ml-2 shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--kaiko-primary)] animate-pulse inline-block" />
-                出走前
+        {/* レース概要（カードなし） */}
+        <section className="pt-1 pb-2 px-1">
+          <div className="flex items-start justify-between mb-3">
+            <h2 className="text-3xl font-black text-[#131313] tracking-tight leading-none">
+              {race.race_name}
+            </h2>
+            <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-[var(--kaiko-primary-container)] border border-[var(--kaiko-primary)]/30 text-[var(--kaiko-primary)] uppercase tracking-wide ml-2 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--kaiko-primary)] animate-pulse inline-block" />
+              出走前
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2 mb-3">
+            <Badge label={race.grade} style={gradeBadge} />
+            <Badge label={race.surface} style={surfaceBadge} />
+            <Badge label={`${race.distance}m`} style={{ border: "border-black/8", bg: "bg-black/5", text: "text-[var(--kaiko-text-muted)]" }} />
+            {race.head_count && (
+              <Badge label={`${race.head_count}頭`} style={{ border: "border-black/8", bg: "bg-black/5", text: "text-[var(--kaiko-text-muted)]" }} />
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12px] text-[var(--kaiko-text-muted)]">
+            <span className="flex items-center gap-1 font-bold">
+              <span className="material-symbols-outlined text-[15px]">location_on</span>
+              {race.track}競馬場
+            </span>
+            <span>{formatDate(race.race_date)}</span>
+            {race.odds_updated_at && (
+              <span className="font-normal">
+                オッズ更新 {formatOddsUpdated(race.odds_updated_at)}
               </span>
-            </div>
-            <div className="flex flex-wrap gap-2 mb-4">
-              <Badge label={race.grade} style={gradeBadge} />
-              <Badge label={race.surface} style={surfaceBadge} />
-              <Badge label={`${race.distance}m`} style={{ border: "border-[var(--kaiko-border)]", bg: "bg-gray-50", text: "text-[var(--kaiko-text-sub)]" }} />
-              {race.head_count && (
-                <Badge label={`${race.head_count}頭`} style={{ border: "border-[var(--kaiko-border)]", bg: "bg-gray-50", text: "text-[var(--kaiko-text-sub)]" }} />
-              )}
-            </div>
-            <div className="flex gap-4 text-[13px] text-[var(--kaiko-text-sub)] font-bold">
-              <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">location_on</span>
-                {race.track}競馬場
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">calendar_today</span>
-                {formatDate(race.race_date)}
-              </span>
-            </div>
+            )}
           </div>
         </section>
 
         {/* コース特性カード */}
         {courseChar && (
-          <section className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[var(--kaiko-border)] overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border-b border-[var(--kaiko-border)]">
+          <section className="bg-white rounded-2xl overflow-hidden border border-black/8">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-black/4 border-b border-black/8">
               <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-[16px]">map</span>
-              <span className="text-[10px] font-black text-[var(--kaiko-text-main)] uppercase tracking-wider">
+              <span className="text-[10px] font-black text-[#131313] uppercase tracking-wider">
                 コース特性 — {race.track} {race.surface}{race.distance}m
               </span>
             </div>
-            <div className="divide-y divide-[var(--kaiko-border)]">
-              <div className="flex gap-3 px-4 py-2.5">
-                <span className="material-symbols-outlined text-amber-500 text-[15px] shrink-0 mt-0.5">directions_run</span>
-                <div className="min-w-0">
-                  <span className="block text-[9px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider mb-0.5">脚質傾向</span>
-                  <span className="text-[12px] font-bold text-[var(--kaiko-text-main)] leading-snug line-clamp-2">{courseChar.runningStyle}</span>
-                </div>
+            <div className="divide-y divide-black/6">
+              <div className="px-4 py-2.5">
+                <span className="block text-[9px] font-black text-[var(--kaiko-primary)] uppercase tracking-wider mb-0.5">脚質傾向</span>
+                <span className="text-[12px] font-bold text-[#131313] leading-snug line-clamp-2">{courseChar.runningStyle}</span>
               </div>
-              <div className="flex gap-3 px-4 py-2.5">
-                <span className="material-symbols-outlined text-blue-500 text-[15px] shrink-0 mt-0.5">grid_view</span>
-                <div className="min-w-0">
-                  <span className="block text-[9px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider mb-0.5">枠順傾向</span>
-                  <span className="text-[12px] font-bold text-[var(--kaiko-text-main)] leading-snug line-clamp-2">{courseChar.postBias}</span>
-                </div>
+              <div className="px-4 py-2.5">
+                <span className="block text-[9px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider mb-0.5">枠順傾向</span>
+                <span className="text-[12px] font-bold text-[#131313] leading-snug line-clamp-2">{courseChar.postBias}</span>
               </div>
-              <div className="flex gap-3 px-4 py-2.5">
-                <span className="material-symbols-outlined text-emerald-500 text-[15px] shrink-0 mt-0.5">info</span>
-                <div className="min-w-0">
-                  <span className="block text-[9px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider mb-0.5">特記</span>
-                  <span className="text-[12px] font-bold text-[var(--kaiko-text-main)] leading-snug line-clamp-2">{courseChar.notes}</span>
-                </div>
+              <div className="px-4 py-2.5">
+                <span className="block text-[9px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider mb-0.5">特記</span>
+                <span className="text-[12px] font-bold text-[#131313] leading-snug line-clamp-2">{courseChar.notes}</span>
               </div>
             </div>
           </section>
         )}
 
-        {/* オッズ更新バナー */}
-        <div className="flex items-center gap-2 bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[var(--kaiko-border)] px-4 py-3">
-          <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-[18px]">sync</span>
-          <div className="flex-1 min-w-0">
-            <span className="text-[11px] font-bold text-[var(--kaiko-text-main)]">オッズ最終更新</span>
-            <span className="text-[11px] text-[var(--kaiko-text-muted)] ml-2 font-[family-name:var(--font-rajdhani)]">
-              {formatOddsUpdated(race.odds_updated_at)}
-            </span>
-          </div>
-          <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] uppercase tracking-wider shrink-0">
-            netkeiba
-          </span>
-        </div>
-
-        {/* 凡例 */}
-        <div className="flex items-center gap-3 px-1 flex-wrap">
-          <span className="font-[family-name:var(--font-rajdhani)] text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase tracking-wider">近3走：</span>
-          {(["below", "fair", "above", "disregard"] as const).map((tag) => {
-            const labels = { below: "実力以下", fair: "実力通り", above: "実力以上", disregard: "度外視" };
-            const colors = { below: "bg-emerald-400", fair: "bg-[var(--kaiko-primary)]", above: "bg-amber-400", disregard: "bg-gray-300" };
-            return (
-              <div key={tag} className="flex items-center gap-1">
-                <span className={`w-[7px] h-[7px] rounded-full ${colors[tag]} inline-block`} />
-                <span className="text-[10px] text-[var(--kaiko-text-sub)] font-bold">{labels[tag]}</span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* 印の凡例 */}
-        <div className="flex items-center gap-2 px-1 flex-wrap">
-          <span className="font-[family-name:var(--font-rajdhani)] text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase tracking-wider">印：</span>
-          {(["◎", "○", "▲", "△", "★"] as const).map((sym) => {
-            const colors: Record<string, string> = {
-              "◎": "text-red-600", "○": "text-blue-600", "▲": "text-gray-800",
-              "△": "text-gray-500", "★": "text-amber-500",
-            };
-            const labels: Record<string, string> = {
-              "◎": "本命", "○": "対抗", "▲": "単穴", "△": "連下", "★": "逆張り",
-            };
-            return (
-              <div key={sym} className="flex items-center gap-0.5">
-                <span className={`text-[13px] font-black leading-none ${colors[sym]}`}>{sym}</span>
-                <span className="text-[9px] text-[var(--kaiko-text-muted)]">{labels[sym]}</span>
-              </div>
-            );
-          })}
-          <span className="text-[9px] text-[var(--kaiko-text-muted)]">タップで詳細</span>
-        </div>
-
-        {/* 出走馬リスト（Client Component） */}
+        {/* 出走馬リスト */}
         <div className="flex items-center gap-2 px-1 pt-1">
           <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-[18px]">list_alt</span>
-          <span className="text-[12px] font-black text-[var(--kaiko-text-main)] uppercase tracking-wider">
+          <span className="text-[12px] font-black text-[#131313] uppercase tracking-wider">
             出馬表（{entriesWithForm.length}頭）
           </span>
         </div>
@@ -472,13 +399,13 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
 
         {/* 次走買い候補サマリー */}
         {buyCandidates.length > 0 && (
-          <section className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-emerald-200 overflow-hidden">
-            <div className="h-1 bg-emerald-400 w-full" />
+          <section className="bg-white rounded-2xl overflow-hidden border border-[var(--kaiko-tag-green-text)]/30">
+            <div className="h-1 bg-[var(--kaiko-tag-green-text)] w-full" />
             <div className="p-4">
               <div className="flex items-center gap-2 mb-3">
-                <span className="material-symbols-outlined text-emerald-500 text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>trending_up</span>
-                <span className="text-[12px] font-black text-[var(--kaiko-text-main)] uppercase tracking-wider">次走買い候補</span>
-                <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] ml-auto">近2走以上 実力以下</span>
+                <span className="material-symbols-outlined text-[var(--kaiko-tag-green-text)] text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>trending_up</span>
+                <span className="text-[12px] font-black text-[#131313] uppercase tracking-wider">次走買い候補</span>
+                <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] ml-auto">近2走以上 ラッキー</span>
               </div>
               <div className="space-y-2">
                 {buyCandidates.map((e) => {
@@ -487,20 +414,20 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
                   return (
                     <div
                       key={e.id}
-                      className="flex items-center gap-3 bg-[var(--kaiko-eval-positive-bg)] border border-emerald-200 rounded-lg px-3 py-2.5"
+                      className="flex items-center gap-3 bg-[var(--kaiko-eval-positive-bg)] border border-[var(--kaiko-eval-positive-text)]/30 rounded-2xl px-3 py-2.5"
                     >
-                      <div className={`w-5 h-5 rounded ${wakuStyle.bg} border ${wakuStyle.border} flex items-center justify-center text-[10px] font-black font-[family-name:var(--font-rajdhani)] shrink-0`}>
+                      <div className={`w-5 h-5 rounded-lg ${wakuStyle.bg} border ${wakuStyle.border} flex items-center justify-center text-[10px] font-black shrink-0`}>
                         {e.frame_number ?? "-"}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-[13px] font-bold text-[var(--kaiko-text-main)]">{e.horse_name}</span>
+                        <span className="text-[13px] font-bold text-[#131313]">{e.horse_name}</span>
                         {e.jockey && (
-                          <span className="text-[10px] text-[var(--kaiko-text-sub)] ml-2">{e.jockey}</span>
+                          <span className="text-[10px] text-[var(--kaiko-text-muted)] ml-2">{e.jockey}</span>
                         )}
                       </div>
                       {e.odds !== null && (
                         <div className="text-right shrink-0">
-                          <span className="text-[16px] font-black text-[var(--kaiko-primary)] font-[family-name:var(--font-rajdhani)]">
+                          <span className="text-[16px] font-black text-[var(--kaiko-primary)]">
                             {e.odds.toFixed(1)}
                           </span>
                           <span className="text-[10px] text-[var(--kaiko-primary)] font-bold">倍</span>

@@ -6,50 +6,84 @@ import type { UpcomingEntryWithForm, RecentPerf } from "@/lib/database.types";
 import type { ValueBetDetail, HorsePick } from "@/lib/database.types";
 import { isBuyCandidate } from "@/lib/database.types";
 
-const WAKU_STYLES: Record<number, { bg: string; border: string }> = {
-  1: { bg: "bg-white",         border: "border-gray-300" },
-  2: { bg: "bg-[#e2e8f0]",     border: "border-gray-300" },
-  3: { bg: "bg-[#fee2e2]",     border: "border-red-200" },
-  4: { bg: "bg-[#dbeafe]",     border: "border-blue-200" },
-  5: { bg: "bg-[#fef9c3]",     border: "border-yellow-300" },
-  6: { bg: "bg-[#dcfce7]",     border: "border-emerald-200" },
-  7: { bg: "bg-[#ffedd5]",     border: "border-orange-200" },
-  8: { bg: "bg-[#fce7f3]",     border: "border-pink-200" },
+// 枠番色（馬番バッジの背景色として使用）
+const WAKU_NUM_STYLE: Record<number, { bg: string; text: string }> = {
+  1: { bg: "bg-white",          text: "text-[#131313]" },
+  2: { bg: "bg-zinc-500",       text: "text-white" },
+  3: { bg: "bg-red-600",        text: "text-white" },
+  4: { bg: "bg-blue-600",       text: "text-white" },
+  5: { bg: "bg-yellow-400",     text: "text-[#131313]" },
+  6: { bg: "bg-emerald-600",    text: "text-white" },
+  7: { bg: "bg-orange-500",     text: "text-[#131313]" },
+  8: { bg: "bg-pink-500",       text: "text-[#131313]" },
 };
 
 const EVAL_MINI: Record<string, { bg: string; border: string; text: string }> = {
-  below:     { bg: "bg-[var(--kaiko-eval-positive-bg)]", border: "border-emerald-200", text: "text-[var(--kaiko-eval-positive-text)]" },
-  fair:      { bg: "bg-[var(--kaiko-eval-neutral-bg)]",  border: "border-blue-200",    text: "text-[var(--kaiko-eval-neutral-text)]" },
-  above:     { bg: "bg-[var(--kaiko-eval-warning-bg)]",  border: "border-amber-200",   text: "text-[var(--kaiko-eval-warning-text)]" },
-  disregard: { bg: "bg-[var(--kaiko-eval-disregard-bg)]", border: "border-gray-200",   text: "text-[var(--kaiko-text-muted)]" },
+  below:     { bg: "bg-[var(--kaiko-eval-positive-bg)]", border: "border-[var(--kaiko-eval-positive-text)]/30", text: "text-[var(--kaiko-eval-positive-text)]" },
+  fair:      { bg: "bg-[var(--kaiko-eval-neutral-bg)]",  border: "border-[var(--kaiko-eval-neutral-text)]/30",  text: "text-[var(--kaiko-eval-neutral-text)]" },
+  above:     { bg: "bg-[var(--kaiko-eval-warning-bg)]",  border: "border-[var(--kaiko-eval-warning-text)]/30",  text: "text-[var(--kaiko-eval-warning-text)]" },
+  disregard: { bg: "bg-white/6",                          border: "border-black/8",                             text: "text-[var(--kaiko-text-muted)]" },
+};
+
+// eval_tagの表示ラベル
+const EVAL_LABEL: Record<string, string> = {
+  below:     "ラッキー",
+  fair:      "実力通り",
+  above:     "伸び代◎",
+  disregard: "度外視",
 };
 
 const PICK_STYLE: Record<string, { text: string; weight: string; label: string; desc: string; color: string }> = {
-  "◎": { text: "text-red-600",    weight: "font-black", label: "本命",   desc: "最も期待値が高い馬", color: "bg-red-50 border-red-200" },
-  "○": { text: "text-blue-600",   weight: "font-black", label: "対抗",   desc: "2番手の期待値",      color: "bg-blue-50 border-blue-200" },
-  "▲": { text: "text-gray-800",   weight: "font-black", label: "単穴",   desc: "3番手の期待値",      color: "bg-gray-50 border-gray-300" },
-  "△": { text: "text-gray-500",   weight: "font-bold",  label: "連下",   desc: "4番手の期待値",      color: "bg-gray-50 border-gray-200" },
-  "★": { text: "text-amber-500",  weight: "font-black", label: "逆張り", desc: "能力の割に人気がない穴馬", color: "bg-amber-50 border-amber-200" },
-  "✓": { text: "text-gray-300",   weight: "font-bold",  label: "参考",   desc: "データあり・圏外",   color: "bg-gray-50 border-gray-200" },
+  "◎": { text: "text-red-500",                            weight: "font-black", label: "本命",   desc: "最も期待値が高い馬",      color: "bg-red-900/30 border-red-500/30" },
+  "○": { text: "text-blue-400",                           weight: "font-black", label: "対抗",   desc: "2番手の期待値",            color: "bg-blue-900/30 border-blue-500/30" },
+  "▲": { text: "text-[#131313]",                          weight: "font-black", label: "単穴",   desc: "3番手の期待値",            color: "bg-black/6 border-black/10" },
+  "△": { text: "text-[#6A6B61]",                          weight: "font-bold",  label: "連下",   desc: "4番手の期待値",            color: "bg-black/4 border-black/8" },
+  "★": { text: "text-[var(--kaiko-tag-gold-text)]",       weight: "font-black", label: "穴",     desc: "能力の割に人気がない穴馬", color: "bg-[var(--kaiko-tag-gold-bg)] border-[var(--kaiko-tag-gold-text)]/30" },
+  "✓": { text: "text-[#6A6B61]",                          weight: "font-bold",  label: "参考",   desc: "データあり・圏外",         color: "bg-black/4 border-black/8" },
 };
 
+// 走法テキストカラーのみ（囲みなし）
+const RUNNING_STYLE_COLOR: Record<string, string> = {
+  "逃げ":     "text-[var(--kaiko-tag-red-text)]",
+  "先行":     "text-[var(--kaiko-tag-gold-text)]",
+  "差し":     "text-[var(--kaiko-tag-blue-text)]",
+  "追い込み": "text-[var(--kaiko-tag-green-text)]",
+};
+
+/**
+ * 近走評価のミニバッジ（着順 or "-"）
+ */
 function EvalMiniBadge({ perf }: { perf: RecentPerf }) {
   const tag = perf.eval_tag ?? "disregard";
   const s = EVAL_MINI[tag] ?? EVAL_MINI.disregard;
   const label = tag === "disregard" ? "-" : String(perf.finish_order);
   return (
-    <span className={`font-[family-name:var(--font-rajdhani)] text-[10px] font-black w-[18px] h-[18px] rounded flex items-center justify-center border ${s.bg} ${s.border} ${s.text}`}>
+    <span className={`text-[11px] font-black w-[18px] h-[18px] rounded-lg flex items-center justify-center border ${s.bg} ${s.border} ${s.text}`}>
       {label}
     </span>
   );
 }
 
-const RUNNING_STYLE_STYLE: Record<string, { bg: string; text: string; border: string }> = {
-  "逃げ":   { bg: "bg-red-50",    text: "text-red-600",    border: "border-red-200" },
-  "先行":   { bg: "bg-amber-50",  text: "text-amber-700",  border: "border-amber-200" },
-  "差し":   { bg: "bg-blue-50",   text: "text-blue-600",   border: "border-blue-200" },
-  "追い込み": { bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-200" },
-};
+/**
+ * 能力ランク表示（最も目立つUI）
+ */
+function AbilityRankCell({ rank }: { rank: number | undefined }) {
+  if (rank === undefined) {
+    return <span className="text-[12px] text-[var(--kaiko-text-muted)] text-center block">—</span>;
+  }
+  const size = rank === 1 ? "text-[22px]" : rank <= 3 ? "text-[18px]" : "text-[15px]";
+  const color = rank === 1
+    ? "text-[var(--kaiko-primary)]"
+    : rank <= 3
+    ? "text-[#131313]"
+    : "text-[var(--kaiko-text-muted)]";
+  return (
+    <div className="flex items-baseline justify-center gap-0">
+      <span className={`font-black leading-none ${size} ${color}`}>{rank}</span>
+      <span className={`text-[9px] font-black leading-none ${color}`}>位</span>
+    </div>
+  );
+}
 
 interface Props {
   entriesWithForm: UpcomingEntryWithForm[];
@@ -61,55 +95,110 @@ interface Props {
 
 export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, picksMap: picksArr, runningStyleMap: runningStyleArr, abilityRankMap: abilityRankArr }: Props) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [showWinProbTooltipId, setShowWinProbTooltipId] = useState<number | null>(null);
 
-  // Map に復元
   const valueBetMap = new Map<number, ValueBetDetail>(valueBetArr);
   const picksMap = new Map<number, HorsePick>(picksArr);
   const runningStyleMap = new Map<number, string>(runningStyleArr);
   const abilityRankMap = new Map<number, number>(abilityRankArr);
 
+  // グリッド列定義：人気 | 馬番 | 印 | 馬名 | 能力 | 単勝/近走
+  const GRID_COLS = "34px 26px 24px 1fr 46px 56px";
+
   return (
-    <section className="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[var(--kaiko-border)] overflow-hidden">
+    <section className="bg-white rounded-2xl overflow-hidden border border-black/8">
       {/* テーブルヘッダー */}
       <div
-        className="grid gap-2 px-3 py-2.5 bg-gray-50 border-b border-[var(--kaiko-border)] items-center"
-        style={{ gridTemplateColumns: "20px 28px 24px 1fr 72px" }}
+        className="grid gap-2 px-3 py-2.5 bg-black/4 border-b border-black/8 items-center"
+        style={{ gridTemplateColumns: GRID_COLS }}
       >
-        <span className="font-[family-name:var(--font-rajdhani)] text-[10px] font-black text-[var(--kaiko-text-muted)] text-center">印</span>
-        <span className="font-[family-name:var(--font-rajdhani)] text-[10px] font-black text-[var(--kaiko-text-muted)] text-center">枠</span>
-        <span className="font-[family-name:var(--font-rajdhani)] text-[10px] font-black text-[var(--kaiko-text-muted)] text-center">馬</span>
-        <span className="font-[family-name:var(--font-rajdhani)] text-[10px] font-black text-[var(--kaiko-text-muted)]">馬名 / 騎手</span>
-        <span className="font-[family-name:var(--font-rajdhani)] text-[10px] font-black text-[var(--kaiko-text-muted)] text-right">単勝 / 近走</span>
+        <span className="text-[11px] font-black text-[var(--kaiko-text-muted)] text-center">人気</span>
+        <span className="text-[11px] font-black text-[var(--kaiko-text-muted)] text-center">馬番</span>
+        <span className="text-[11px] font-black text-[var(--kaiko-text-muted)] text-center">印</span>
+        <span className="text-[11px] font-black text-[var(--kaiko-text-muted)]">馬名 / 騎手</span>
+        <span className="text-[11px] font-black text-[var(--kaiko-primary)] text-center">能力</span>
+        <span className="text-[11px] font-black text-[var(--kaiko-text-muted)] text-right">単勝</span>
       </div>
 
       {entriesWithForm.length === 0 ? (
-        <div className="px-4 py-8 text-center text-sm text-[var(--kaiko-text-muted)]">
+        <div className="px-4 py-8 text-center text-[13px] text-[var(--kaiko-text-muted)]">
           エントリーデータがありません
         </div>
       ) : (
         entriesWithForm.map((entry) => {
-          const isCandidate = isBuyCandidate(entry.recentPerfs);
-          const vbDetail: ValueBetDetail | undefined = entry.horse_id ? valueBetMap.get(entry.horse_id) : undefined;
-          const isValueBet = vbDetail !== undefined;
-          const pick: HorsePick | undefined = entry.horse_id ? picksMap.get(entry.horse_id) : undefined;
-          const waku = entry.frame_number ?? 1;
-          const wakuStyle = WAKU_STYLES[Math.min(waku, 8)] ?? WAKU_STYLES[1];
+          const waku = Math.min(entry.frame_number ?? 1, 8);
+          const wakuStyle = WAKU_NUM_STYLE[waku] ?? WAKU_NUM_STYLE[1];
           const horseHref = entry.horse_id ? `/horses/${entry.horse_id}` : undefined;
+
+          // horse_idがない場合は準備中として表示
+          if (!entry.horse_id) {
+            return (
+              <div key={entry.id} className="border-b border-black/6 last:border-b-0 opacity-40">
+                <div
+                  className="grid gap-2 px-3 py-3.5 items-center"
+                  style={{ gridTemplateColumns: GRID_COLS }}
+                >
+                  {/* 人気（丸なし・文字のみ） */}
+                  <div className="flex items-center justify-center">
+                    <span className="text-[12px] font-black text-[var(--kaiko-text-muted)]">
+                      {entry.popularity ?? "—"}
+                    </span>
+                  </div>
+                  {/* 馬番（枠色・四角バッジ） */}
+                  <div className="flex items-center justify-center">
+                    <span className={`w-[22px] h-[22px] rounded-none flex items-center justify-center text-[12px] font-black ${wakuStyle.bg} ${wakuStyle.text}`}>
+                      {entry.horse_number ?? "-"}
+                    </span>
+                  </div>
+                  {/* 印なし */}
+                  <span className="text-[var(--kaiko-text-muted)] text-center text-[13px]">—</span>
+                  {/* 馬名 + 準備中 */}
+                  <div className="min-w-0">
+                    <span className="font-bold text-[14px] text-[var(--kaiko-text-muted)] leading-tight truncate block">
+                      {entry.horse_name}
+                    </span>
+                    <span className="text-[11px] text-[var(--kaiko-text-muted)]">準備中...</span>
+                  </div>
+                  {/* 能力なし */}
+                  <span className="text-[12px] text-[var(--kaiko-text-muted)] text-center">—</span>
+                  {/* オッズ */}
+                  <div className="flex flex-col items-end">
+                    {entry.odds !== null && (
+                      <span className="text-[14px] font-black text-[var(--kaiko-text-muted)]">
+                        {entry.odds.toFixed(1)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          const isCandidate = isBuyCandidate(entry.recentPerfs);
+          const vbDetail: ValueBetDetail | undefined = valueBetMap.get(entry.horse_id);
+          const pick: HorsePick | undefined = picksMap.get(entry.horse_id);
           const isExpanded = expandedId === entry.id;
           const pickStyle = pick ? PICK_STYLE[pick.symbol] : null;
-          const runningStyle = entry.horse_id ? runningStyleMap.get(entry.horse_id) : undefined;
-          const rsStyle = runningStyle ? RUNNING_STYLE_STYLE[runningStyle] : null;
-          const abilityRank = entry.horse_id ? abilityRankMap.get(entry.horse_id) : undefined;
+          const runningStyle = runningStyleMap.get(entry.horse_id);
+          const runningColor = runningStyle ? RUNNING_STYLE_COLOR[runningStyle] : null;
+          const abilityRank = abilityRankMap.get(entry.horse_id);
+          // pickがある場合のみ展開可能
+          const isExpandable = !!pick;
 
-          // pick がなくても逆張り詳細があればタップ可能にする
-          const isExpandable = !!(pick || vbDetail);
+          // 人気カラー（丸なし）
+          const popularityColor = entry.popularity !== null
+            ? entry.popularity <= 3
+              ? "text-[var(--kaiko-primary)] font-black"
+              : entry.popularity <= 6
+              ? "text-[#131313] font-black"
+              : "text-[var(--kaiko-text-muted)] font-bold"
+            : "text-[var(--kaiko-text-muted)]";
 
           return (
             <div
               key={entry.id}
-              className={`border-b border-[var(--kaiko-border)] last:border-b-0 ${
-                isValueBet ? "bg-amber-50/50 border-l-2 border-l-amber-400" :
-                isCandidate ? "bg-emerald-50/40 border-l-2 border-l-emerald-400" : ""
+              className={`border-b border-black/6 last:border-b-0 ${
+                isCandidate ? "border-l-2 border-l-[var(--kaiko-tag-green-text)]" : ""
               }`}
             >
               {/* メイン行 */}
@@ -118,234 +207,232 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
                 onClick={() => isExpandable ? setExpandedId(isExpanded ? null : entry.id) : undefined}
               >
                 <div
-                  className={`grid gap-2 px-3 py-3.5 items-center ${isExpandable ? "cursor-pointer active:bg-gray-50" : ""}`}
-                  style={{ gridTemplateColumns: "20px 28px 24px 1fr 72px" }}
+                  className={`grid gap-2 px-3 py-3.5 items-center ${isExpandable ? "cursor-pointer active:bg-black/4" : ""}`}
+                  style={{ gridTemplateColumns: GRID_COLS }}
                 >
-                  {/* 印 */}
-                  <div className="flex flex-col items-center justify-center">
-                    {pick ? (
-                      <>
-                        <span className={`text-[18px] leading-none ${PICK_STYLE[pick.symbol]?.text} ${PICK_STYLE[pick.symbol]?.weight}`}>
-                          {pick.symbol}
-                        </span>
-                        <span className="text-[8px] font-bold text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] leading-none mt-0.5">
-                          {pick.ev.toFixed(1)}
-                        </span>
-                      </>
+                  {/* 人気（丸なし・文字カラーのみ） */}
+                  <div className="flex items-center justify-center">
+                    {entry.popularity !== null ? (
+                      <span className={`text-[13px] ${popularityColor}`}>
+                        {entry.popularity}
+                      </span>
                     ) : (
-                      <span className="text-[11px] text-[var(--kaiko-text-muted)]">—</span>
+                      <span className="text-[12px] text-[var(--kaiko-text-muted)]">—</span>
                     )}
                   </div>
 
-                  {/* 枠番 */}
-                  <div className={`w-6 h-6 rounded-md ${wakuStyle.bg} border ${wakuStyle.border} shadow-sm flex items-center justify-center text-[11px] font-black font-[family-name:var(--font-rajdhani)]`}>
-                    {entry.frame_number ?? "-"}
+                  {/* 馬番（枠番の色で表現・四角バッジ） */}
+                  <div className="flex items-center justify-center">
+                    <span className={`w-[22px] h-[22px] rounded-none flex items-center justify-center text-[12px] font-black ${wakuStyle.bg} ${wakuStyle.text}`}>
+                      {entry.horse_number ?? "-"}
+                    </span>
                   </div>
 
-                  {/* 馬番 */}
-                  <span className="text-[13px] font-black text-[var(--kaiko-text-muted)] text-center font-[family-name:var(--font-rajdhani)] italic leading-none">
-                    {entry.horse_number ?? "-"}
-                  </span>
+                  {/* 印 */}
+                  <div className="flex flex-col items-center justify-center">
+                    {pick ? (
+                      <span className={`text-[18px] leading-none ${PICK_STYLE[pick.symbol]?.text} ${PICK_STYLE[pick.symbol]?.weight}`}>
+                        {pick.symbol}
+                      </span>
+                    ) : (
+                      <span className="text-[13px] text-[var(--kaiko-text-muted)]">—</span>
+                    )}
+                  </div>
 
                   {/* 馬名・騎手 */}
                   <div className="min-w-0">
                     {horseHref ? (
                       <Link
                         href={horseHref}
-                        className="font-bold text-[14px] text-[var(--kaiko-text-main)] leading-tight truncate block hover:text-[var(--kaiko-primary)]"
+                        className="font-bold text-[14px] text-[#131313] leading-tight truncate block hover:text-[var(--kaiko-primary)]"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {entry.horse_name}
                       </Link>
                     ) : (
-                      <span className="font-bold text-[14px] text-[var(--kaiko-text-main)] leading-tight truncate block">
+                      <span className="font-bold text-[14px] text-[#131313] leading-tight truncate block">
                         {entry.horse_name}
                       </span>
                     )}
-                    <div className="flex items-center gap-1.5 mt-0.5">
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                       {entry.jockey && (
-                        <span className="text-[10px] text-[var(--kaiko-text-sub)] font-[family-name:var(--font-rajdhani)] font-bold truncate max-w-[80px]">
+                        <span className="text-[11px] text-[var(--kaiko-text-muted)] font-bold truncate max-w-[80px]">
                           {entry.jockey}
                         </span>
                       )}
                       {entry.weight_carried && (
-                        <span className="text-[10px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)]">
+                        <span className="text-[11px] text-[var(--kaiko-text-muted)]">
                           {entry.weight_carried}kg
                         </span>
                       )}
-                      {runningStyle && rsStyle && (
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${rsStyle.bg} ${rsStyle.border} ${rsStyle.text} shrink-0`}>
+                      {/* 走法：アイコン（カラードット）＋テキストのみ、囲みなし */}
+                      {runningStyle && runningColor && (
+                        <span className={`text-[11px] font-bold ${runningColor} flex items-center gap-0.5 shrink-0`}>
+                          <span className="text-[8px] leading-none">●</span>
                           {runningStyle}
                         </span>
                       )}
-                      {abilityRank !== undefined && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-indigo-50 border-indigo-200 text-indigo-600 shrink-0">
-                          能力{abilityRank}位
-                        </span>
-                      )}
                     </div>
-                    {/* タグ */}
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {isValueBet && (
-                        <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-300 text-amber-700">
-                          <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                          逆張り買い
-                        </span>
-                      )}
-                      {isCandidate && (
-                        <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--kaiko-eval-positive-bg)] border border-emerald-200 text-[var(--kaiko-eval-positive-text)]">
-                          <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>trending_up</span>
+                    {isCandidate && (
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        <span className="inline-flex items-center gap-0.5 text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--kaiko-eval-positive-bg)] border border-[var(--kaiko-eval-positive-text)]/30 text-[var(--kaiko-eval-positive-text)]">
+                          <span className="material-symbols-outlined text-[11px]" style={{ fontVariationSettings: "'FILL' 1" }}>trending_up</span>
                           次走買い候補
                         </span>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
 
-                  {/* オッズ・近3走 */}
-                  <div className="flex flex-col items-end gap-1.5">
+                  {/* 能力ランク（最も目立つ） */}
+                  <AbilityRankCell rank={abilityRank} />
+
+                  {/* 単勝オッズ・近走 */}
+                  <div className="flex flex-col items-end gap-1">
                     {entry.odds !== null ? (
                       <div className="flex items-baseline gap-0.5">
-                        <span className={`text-[18px] font-black leading-none font-[family-name:var(--font-rajdhani)] ${
-                          (entry.popularity ?? 99) <= 3
-                            ? "text-[var(--kaiko-primary)]"
-                            : "text-[var(--kaiko-text-sub)]"
-                        }`}>
+                        <span className="text-[16px] font-black leading-none text-[#131313]">
                           {entry.odds.toFixed(1)}
                         </span>
-                        <span className={`text-[10px] font-bold leading-none ${
-                          (entry.popularity ?? 99) <= 3
-                            ? "text-[var(--kaiko-primary)]"
-                            : "text-[var(--kaiko-text-sub)]"
-                        }`}>倍</span>
+                        <span className="text-[11px] font-bold text-[var(--kaiko-text-muted)]">倍</span>
                       </div>
                     ) : (
-                      <span className="text-[13px] font-bold text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)]">—</span>
+                      <span className="text-[13px] font-bold text-[var(--kaiko-text-muted)]">—</span>
                     )}
                     <div className="flex items-center gap-0.5">
-                      {entry.popularity !== null && (
-                        <span className={`font-[family-name:var(--font-rajdhani)] text-[9px] font-black text-white px-1 rounded leading-none py-0.5 mr-1 ${
-                          entry.popularity <= 3 ? "bg-amber-500" : "bg-gray-400"
-                        }`}>
-                          {entry.popularity}人気
-                        </span>
-                      )}
-                      <div className="flex gap-0.5">
-                        {entry.recentPerfs.length > 0
-                          ? entry.recentPerfs.map((p, i) => (
-                              <EvalMiniBadge key={i} perf={p} />
-                            ))
-                          : <span className="text-[9px] text-[var(--kaiko-text-muted)]">—</span>
-                        }
-                      </div>
+                      {entry.recentPerfs.length > 0
+                        ? entry.recentPerfs.map((p, i) => (
+                            <EvalMiniBadge key={i} perf={p} />
+                          ))
+                        : <span className="text-[11px] text-[var(--kaiko-text-muted)]">—</span>
+                      }
                     </div>
                     {isExpandable && (
-                      <span className="text-[8px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)]">
-                        {isExpanded ? "閉じる ▴" : "詳細を見る ▾"}
+                      <span className="text-[10px] text-[var(--kaiko-text-muted)]">
+                        {isExpanded ? "閉じる ▴" : "詳細 ▾"}
                       </span>
                     )}
                   </div>
                 </div>
               </button>
 
-              {/* 展開パネル: 印の詳細 or 逆張り詳細のみ */}
-              {isExpanded && (pick || vbDetail) && (
-                <div className={`mx-3 mb-3 rounded-xl border ${pickStyle ? pickStyle.color : "bg-amber-50 border-amber-200"} p-3 space-y-2.5`}>
+              {/* 展開パネル（pickがある場合のみ） */}
+              {isExpanded && pick && pickStyle && (
+                <div className="mx-3 mb-3 rounded-2xl border bg-black/5 border-white/12 p-3 space-y-2.5">
 
-                  {/* 印あり: ヘッダー + EV + 推定勝率 */}
-                  {pick && pickStyle && (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[22px] font-black leading-none ${pickStyle.text} ${pickStyle.weight}`}>
-                          {pick.symbol}
-                        </span>
-                        <div>
-                          <span className={`text-[12px] font-black ${pickStyle.text}`}>{pickStyle.label}</span>
-                          <p className="text-[10px] text-[var(--kaiko-text-muted)]">{pickStyle.desc}</p>
-                        </div>
-                        <div className="ml-auto text-right">
-                          <span className="text-[10px] text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] block">EV（回収率目安）</span>
-                          <span className={`text-[18px] font-black font-[family-name:var(--font-rajdhani)] leading-none ${
-                            pick.ev >= 1.0 ? "text-emerald-600" : "text-[var(--kaiko-text-sub)]"
-                          }`}>
-                            {pick.ev.toFixed(2)}
-                          </span>
-                          <span className="text-[9px] text-[var(--kaiko-text-muted)] block">{pick.ev >= 1.0 ? "▲ 理論プラス" : "▼ 理論マイナス"}</span>
-                        </div>
-                      </div>
-                      <div className="bg-white/70 rounded-lg p-2.5">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <div>
-                            <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase font-[family-name:var(--font-rajdhani)] tracking-wider">推定勝率</span>
-                            <span className="text-[9px] text-[var(--kaiko-text-muted)] block">補正スコアベース・全頭補正済</span>
-                          </div>
-                          <span className="text-[14px] font-black text-[var(--kaiko-text-main)] font-[family-name:var(--font-rajdhani)]">
-                            {pick.winProb.toFixed(1)}%
-                          </span>
-                        </div>
-                        <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-[var(--kaiko-primary)] rounded-full transition-all"
-                            style={{ width: `${Math.min(pick.winProb, 100)}%` }}
-                          />
-                        </div>
-                        <p className="text-[9px] text-[var(--kaiko-text-muted)] mt-1 leading-snug">
-                          ※データあり馬全体を全頭数で補正した理論確率。
-                        </p>
-                      </div>
-                    </>
-                  )}
-
-                  {/* 印なし・逆張りのみの場合のヘッダー */}
-                  {!pick && vbDetail && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-[22px] font-black leading-none text-amber-500">★</span>
-                      <div>
-                        <span className="text-[12px] font-black text-amber-700">逆張り買い候補</span>
-                        <p className="text-[10px] text-[var(--kaiko-text-muted)]">能力の割に人気がない馬（EV計算データ不足）</p>
-                      </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[22px] font-black leading-none ${pickStyle.text} ${pickStyle.weight}`}>
+                      {pick.symbol}
+                    </span>
+                    <div>
+                      <span className={`text-[13px] font-black ${pickStyle.text}`}>{pickStyle.label}</span>
+                      <p className="text-[11px] text-[var(--kaiko-text-muted)]">{pickStyle.desc}</p>
                     </div>
-                  )}
+                    <div className="ml-auto text-right">
+                      <span className="text-[11px] text-[var(--kaiko-text-muted)] block">EV（回収率目安）</span>
+                      <span className={`text-[18px] font-black leading-none ${
+                        pick.ev >= 1.0 ? "text-[var(--kaiko-tag-green-text)]" : "text-[var(--kaiko-text-muted)]"
+                      }`}>
+                        {pick.ev.toFixed(2)}
+                      </span>
+                      <span className="text-[10px] text-[var(--kaiko-text-muted)] block">{pick.ev >= 1.0 ? "▲ 理論プラス" : "▼ 理論マイナス"}</span>
+                    </div>
+                  </div>
 
-                  {/* 逆張り詳細（isValueBetの場合） */}
-                  {vbDetail && (
-                    <div className="bg-amber-50/80 rounded-lg border border-amber-200 p-2.5">
-                      <p className="text-[10px] font-black text-amber-800 mb-1.5 uppercase font-[family-name:var(--font-rajdhani)] tracking-wider">逆張り買い詳細</p>
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
-                        <div className="text-amber-700">能力推定ランク</div>
-                        <div className="font-black text-amber-900">{vbDetail.abilityRank}位</div>
-                        <div className="text-amber-700">現在人気</div>
-                        <div className="font-black text-amber-900">{vbDetail.oddsRank}番人気</div>
-                        <div className="text-amber-700">補正スコア平均</div>
-                        <div className="font-black text-amber-900">{vbDetail.avgScore}</div>
-                        <div className="text-amber-700">分析走数</div>
-                        <div className="font-black text-amber-900">{vbDetail.racesAnalyzed}走</div>
+                  {/* 推定勝率 */}
+                  <div className="bg-black/5 rounded-2xl p-2.5">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-bold text-[var(--kaiko-text-muted)] uppercase tracking-wider">推定勝率</span>
+                        <button
+                          type="button"
+                          className="w-[15px] h-[15px] rounded-full bg-black/8 flex items-center justify-center text-[9px] font-black text-[var(--kaiko-text-muted)] shrink-0 active:bg-white/25"
+                          onClick={(e) => { e.stopPropagation(); setShowWinProbTooltipId(showWinProbTooltipId === entry.id ? null : entry.id); }}
+                        >
+                          ?
+                        </button>
                       </div>
-                      <p className="text-[9px] text-amber-600 mt-1.5 leading-snug">
-                        補正スコア＝着順−能力補正値。小さいほど強い。
+                      <span className="text-[15px] font-black text-[#131313]">
+                        {pick.winProb.toFixed(1)}%
+                      </span>
+                    </div>
+                    {showWinProbTooltipId === entry.id && (
+                      <p className="text-[10px] text-[var(--kaiko-text-muted)] mb-1.5 leading-snug bg-black/4 rounded-xl px-2.5 py-1.5">
+                        データあり馬全体を全頭数で補正した理論確率
                       </p>
+                    )}
+                    <div className="w-full h-1.5 bg-black/6 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[var(--kaiko-primary)] rounded-full transition-all"
+                        style={{ width: `${Math.min(pick.winProb, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* 能力推定ランク（vbDetailがある場合のみ） */}
+                  {vbDetail && (
+                    <div className="bg-black/5 rounded-2xl border border-black/8 p-2.5 space-y-2">
+                      {/* 能力推定ランク（王冠アイコン付き） */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-[var(--kaiko-text-muted)]">能力推定ランク</span>
+                        <div className="flex items-center gap-1.5">
+                          {vbDetail.abilityRank <= 3 && (
+                            <span
+                              className={`material-symbols-outlined text-[18px] ${
+                                vbDetail.abilityRank === 1 ? "text-[var(--kaiko-primary)]" :
+                                vbDetail.abilityRank === 2 ? "text-slate-500" :
+                                "text-amber-600"
+                              }`}
+                              style={{ fontVariationSettings: "'FILL' 1" }}
+                            >
+                              emoji_events
+                            </span>
+                          )}
+                          <span className={`text-[22px] font-black leading-none ${
+                            vbDetail.abilityRank === 1 ? "text-[var(--kaiko-primary)]" :
+                            vbDetail.abilityRank === 2 ? "text-slate-500" :
+                            vbDetail.abilityRank === 3 ? "text-amber-600" :
+                            "text-[var(--kaiko-text-muted)]"
+                          }`}>{vbDetail.abilityRank}位</span>
+                        </div>
+                      </div>
+
+                      {/* 現在人気 */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-[var(--kaiko-text-muted)]">現在人気</span>
+                        <span className={`text-[18px] font-black leading-none px-2 py-0.5 rounded-xl ${
+                          vbDetail.oddsRank <= 3
+                            ? "bg-[var(--kaiko-primary)] text-[#131313]"
+                            : vbDetail.oddsRank <= 6
+                            ? "bg-black/8 text-[#131313]"
+                            : "bg-black/5 text-[var(--kaiko-text-muted)]"
+                        }`}>{vbDetail.oddsRank}番人気</span>
+                      </div>
+
+                      {/* 分析走数（小さめ補足） */}
+                      <p className="text-[10px] text-[var(--kaiko-text-muted)]">分析走数: {vbDetail.racesAnalyzed}走</p>
                     </div>
                   )}
 
-                  {/* 近走詳細 */}
+                  {/* 近走成績 */}
                   {entry.recentPerfs.length > 0 && (
-                    <div className="bg-white/70 rounded-lg p-2.5">
-                      <p className="text-[10px] font-black text-[var(--kaiko-text-muted)] mb-2 uppercase font-[family-name:var(--font-rajdhani)] tracking-wider">近走成績</p>
+                    <div className="bg-black/5 rounded-2xl p-2.5">
+                      <p className="text-[11px] font-black text-[var(--kaiko-text-muted)] mb-2 uppercase tracking-wider">近走成績</p>
                       <div className="space-y-1.5">
                         {entry.recentPerfs.map((perf, i) => {
                           const tag = perf.eval_tag ?? "disregard";
-                          const evalLabel = { below: "実力以下", fair: "実力通り", above: "実力以上", disregard: "度外視" }[tag];
+                          const evalLabel = EVAL_LABEL[tag] ?? "—";
                           const evalColor = {
-                            below: "text-emerald-600",
-                            fair: "text-blue-600",
-                            above: "text-amber-600",
-                            disregard: "text-gray-400",
-                          }[tag];
+                            below:     "text-[var(--kaiko-tag-green-text)]",
+                            fair:      "text-[var(--kaiko-text-muted)]",
+                            above:     "text-[var(--kaiko-tag-gold-text)]",
+                            disregard: "text-[var(--kaiko-text-muted)]",
+                          }[tag] ?? "text-[var(--kaiko-text-muted)]";
                           return (
-                            <div key={i} className="flex items-center gap-2 text-[10px]">
-                              <span className="font-black font-[family-name:var(--font-rajdhani)] text-[var(--kaiko-text-muted)] w-3 text-right shrink-0">
+                            <div key={i} className="flex items-center gap-2 text-[11px]">
+                              <span className="font-black text-[var(--kaiko-text-muted)] w-3 text-right shrink-0">
                                 {tag === "disregard" ? "-" : perf.finish_order}
                               </span>
-                              <span className="text-[var(--kaiko-text-sub)] truncate flex-1">{perf.race_name}</span>
+                              <span className="text-[var(--kaiko-text-muted)] truncate flex-1">{perf.race_name}</span>
                               <span className={`font-bold shrink-0 ${evalColor}`}>{evalLabel}</span>
                             </div>
                           );

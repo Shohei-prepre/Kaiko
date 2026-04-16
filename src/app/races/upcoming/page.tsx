@@ -60,8 +60,10 @@ export default async function UpcomingListPage() {
       {/* ヘッダー */}
       <header className="bg-white border-b border-[var(--kaiko-border)] sticky top-0 z-50 h-14 flex items-center px-4">
         <h1 className="text-xl font-black tracking-tighter font-[family-name:var(--font-noto-sans-jp)]">
-          <span className="text-[var(--kaiko-text-main)]">回顧</span>
-          <span className="text-[var(--kaiko-primary)] italic">AI</span>
+          <Link href="/">
+            <span className="text-[var(--kaiko-text-main)]">回顧</span>
+            <span className="text-[var(--kaiko-primary)] italic">AI</span>
+          </Link>
         </h1>
         <span className="ml-3 text-[11px] font-bold text-[var(--kaiko-text-muted)] font-[family-name:var(--font-rajdhani)] uppercase tracking-widest">
           Upcoming

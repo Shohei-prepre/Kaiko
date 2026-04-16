@@ -29,7 +29,7 @@ export default function Header({ showBack = false, title, rightContent }: Header
         </span>
       )}
       <Link
-        href="/races"
+        href="/"
         className={`font-[family-name:var(--font-noto-sans-jp)] font-black italic text-[var(--kaiko-primary)] text-lg leading-none ${title ? "ml-auto" : ""}`}
       >
         回顧AI

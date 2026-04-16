@@ -1,23 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Sans_JP, Rajdhani, Bebas_Neue } from "next/font/google";
+import { Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
 
 const notoSansJP = Noto_Sans_JP({
   variable: "--font-noto-sans-jp",
   subsets: ["latin"],
   weight: ["400", "500", "700", "900"],
-});
-
-const rajdhani = Rajdhani({
-  variable: "--font-rajdhani",
-  subsets: ["latin"],
-  weight: ["600", "700"],
-});
-
-const bebasNeue = Bebas_Neue({
-  variable: "--font-bebas-neue",
-  subsets: ["latin"],
-  weight: "400",
 });
 
 export const viewport: Viewport = {
@@ -39,18 +27,24 @@ export default function RootLayout({
   return (
     <html
       lang="ja"
-      className={`${notoSansJP.variable} ${rajdhani.variable} ${bebasNeue.variable} h-full antialiased`}
+      className={`${notoSansJP.variable} h-full antialiased`}
     >
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+        {/* Material Symbols */}
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
         />
-        {/* Figma capture script - remove after export */}
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script src="https://mcp.figma.com/mcp/html-to-design/capture.js"></script>
+        {/* Bitcount: 数字・英字用フォント */}
+        <link
+          rel="preconnect"
+          href="https://fonts.googleapis.com"
+        />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Bitcount+Prop+Single:ital,wdth,wght@0,75..125,100..900;1,75..125,100..900&display=swap"
+        />
       </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
