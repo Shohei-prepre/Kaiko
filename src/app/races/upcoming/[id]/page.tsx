@@ -300,13 +300,13 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
       <header className="fixed top-0 left-0 w-full z-50 flex items-center px-4 h-14 bg-white border-b border-black/8">
         <div className="flex items-center w-full gap-3">
           <BackButton />
-          <Link href="/" className="flex items-baseline gap-0.5">
+          <Link href="/" className="flex items-baseline gap-0.5 shrink-0">
             <span className="text-xl font-[family-name:var(--font-noto-sans-jp)] font-black tracking-tighter text-[#131313]">回顧</span>
             <span className="text-xl font-[family-name:var(--font-noto-sans-jp)] font-black text-[var(--kaiko-primary)] italic">AI</span>
           </Link>
-          <div className="flex flex-col leading-tight ml-auto text-right">
-            <span className="text-sm font-bold text-[#131313]">{race.race_name}</span>
-            <span className="text-[10px] text-[var(--kaiko-text-muted)] font-bold">
+          <div className="flex flex-col leading-tight ml-auto text-right min-w-0 max-w-[140px]">
+            <span className="text-sm font-bold text-[#131313] truncate">{race.race_name}</span>
+            <span className="text-[10px] text-[var(--kaiko-text-muted)] font-bold truncate">
               {race.race_date.replace(/-/g, "/")} · {race.track} {race.grade}
             </span>
           </div>
