@@ -18,8 +18,8 @@ const WAKU_STYLES: Record<number, { bg: string; border: string; text: string }> 
 
 const EVAL_TAG_STYLES: Record<string, { bg: string; text: string; border: string; label: string }> = {
   fair:      { bg: "bg-[var(--kaiko-eval-neutral-bg)]",    text: "text-[var(--kaiko-eval-neutral-text)]",    border: "border-[var(--kaiko-eval-neutral-text)]/30",   label: "実力通り" },
-  below:     { bg: "bg-[var(--kaiko-eval-positive-bg)]",   text: "text-[var(--kaiko-eval-positive-text)]",   border: "border-[var(--kaiko-eval-positive-text)]/30",  label: "ラッキー" },
-  above:     { bg: "bg-[var(--kaiko-eval-warning-bg)]",    text: "text-[var(--kaiko-eval-warning-text)]",    border: "border-[var(--kaiko-eval-warning-text)]/30",   label: "伸び代◎" },
+  below:     { bg: "bg-[var(--kaiko-eval-positive-bg)]",   text: "text-[var(--kaiko-eval-positive-text)]",   border: "border-[var(--kaiko-eval-positive-text)]/30",  label: "伸び代◎" },
+  above:     { bg: "bg-[var(--kaiko-eval-warning-bg)]",    text: "text-[var(--kaiko-eval-warning-text)]",    border: "border-[var(--kaiko-eval-warning-text)]/30",   label: "ラッキー" },
   disregard: { bg: "bg-[var(--kaiko-eval-disregard-bg)]",  text: "text-[var(--kaiko-eval-disregard-text)]",  border: "border-black/8",                              label: "度外視" },
 };
 

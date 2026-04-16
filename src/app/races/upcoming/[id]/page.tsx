@@ -405,7 +405,7 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
               <div className="flex items-center gap-2 mb-3">
                 <span className="material-symbols-outlined text-[var(--kaiko-tag-green-text)] text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>trending_up</span>
                 <span className="text-[12px] font-black text-[#131313] uppercase tracking-wider">次走買い候補</span>
-                <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] ml-auto">近2走以上 ラッキー</span>
+                <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] ml-auto">近2走以上 伸び代◎</span>
               </div>
               <div className="space-y-2">
                 {buyCandidates.map((e) => {

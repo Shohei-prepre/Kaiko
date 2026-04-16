@@ -27,9 +27,9 @@ const EVAL_MINI: Record<string, { bg: string; border: string; text: string }> = 
 
 // eval_tagの表示ラベル
 const EVAL_LABEL: Record<string, string> = {
-  below:     "ラッキー",
+  below:     "伸び代◎",
   fair:      "実力通り",
-  above:     "伸び代◎",
+  above:     "ラッキー",
   disregard: "度外視",
 };
 
