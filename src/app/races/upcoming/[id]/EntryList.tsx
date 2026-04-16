@@ -300,7 +300,7 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
                     )}
                     <div className="flex items-center gap-0.5">
                       {entry.recentPerfs.length > 0
-                        ? entry.recentPerfs.map((p, i) => (
+                        ? entry.recentPerfs.slice(0, 3).map((p, i) => (
                             <EvalMiniBadge key={i} perf={p} />
                           ))
                         : <span className="text-[11px] text-[var(--kaiko-text-muted)]">—</span>
@@ -418,7 +418,7 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
                     <div className="bg-black/5 rounded-2xl p-2.5">
                       <p className="text-[11px] font-black text-[var(--kaiko-text-muted)] mb-2 uppercase tracking-wider">近走成績</p>
                       <div className="space-y-1.5">
-                        {entry.recentPerfs.map((perf, i) => {
+                        {entry.recentPerfs.slice(0, 3).map((perf, i) => {
                           const tag = perf.eval_tag ?? "fair";
                           const evalLabel = EVAL_LABEL[tag] ?? "—";
                           const evalColor = {

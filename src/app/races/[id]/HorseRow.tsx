@@ -34,7 +34,7 @@ export default function HorseRow({ perf, isFirst = false }: Props) {
   const horse = perf.horses;
   const waku = perf.frame_number ?? 1;
   const wakuStyle = WAKU_STYLES[waku] ?? WAKU_STYLES[1];
-  const evalTag = perf.eval_tag ?? "disregard";
+  const evalTag = perf.eval_tag ?? "fair";
   const evalStyle = EVAL_TAG_STYLES[evalTag];
 
   const aptValue = calcAptitudeValue(perf);
