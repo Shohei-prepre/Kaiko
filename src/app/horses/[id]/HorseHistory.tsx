@@ -48,7 +48,7 @@ export default function HorseHistory({ perfs }: Props) {
     <>
       {perfs.map((perf, i) => {
         const race = perf.races;
-        const evalTag = perf.eval_tag ?? "disregard";
+        const evalTag = perf.eval_tag ?? "fair";
         const evalStyle = EVAL_TAG_STYLES[evalTag];
         const isDisregard = evalTag === "disregard";
         const isExpanded = expandedId === perf.id;

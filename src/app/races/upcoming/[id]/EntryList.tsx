@@ -54,8 +54,8 @@ const RUNNING_STYLE_COLOR: Record<string, string> = {
  * 近走評価のミニバッジ（着順 or "-"）
  */
 function EvalMiniBadge({ perf }: { perf: RecentPerf }) {
-  const tag = perf.eval_tag ?? "disregard";
-  const s = EVAL_MINI[tag] ?? EVAL_MINI.disregard;
+  const tag = perf.eval_tag ?? "fair";
+  const s = EVAL_MINI[tag] ?? EVAL_MINI.fair;
   const label = tag === "disregard" ? "-" : String(perf.finish_order);
   return (
     <span className={`text-[11px] font-black w-[18px] h-[18px] rounded-lg flex items-center justify-center border ${s.bg} ${s.border} ${s.text}`}>
@@ -419,7 +419,7 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
                       <p className="text-[11px] font-black text-[var(--kaiko-text-muted)] mb-2 uppercase tracking-wider">近走成績</p>
                       <div className="space-y-1.5">
                         {entry.recentPerfs.map((perf, i) => {
-                          const tag = perf.eval_tag ?? "disregard";
+                          const tag = perf.eval_tag ?? "fair";
                           const evalLabel = EVAL_LABEL[tag] ?? "—";
                           const evalColor = {
                             below:     "text-[var(--kaiko-tag-green-text)]",

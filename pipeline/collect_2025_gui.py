@@ -283,8 +283,8 @@ class CollectApp:
             font=("Courier", 9),
             state=tk.DISABLED,
             yscrollcommand=scrollbar.set,
-            bg="#1e1e1e",
-            fg="#d4d4d4",
+            bg="white",
+            fg="#131313",
             selectbackground="#264f78",
         )
         self._log_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -392,10 +392,23 @@ class CollectApp:
         # ワーカーが生きていればポーリング継続
         if self._worker_thread and self._worker_thread.is_alive():
             self.root.after(200, self._poll_queue)
-        else:
-            # スレッド終了 → ボタン状態を戻す
+        elif self._stop_event.is_set():
+            # ユーザーが停止 → ボタン状態を戻す
             self._btn_start.config(state=tk.NORMAL)
             self._btn_stop.config(state=tk.DISABLED)
+        else:
+            # 予期しないスレッド終了（例外クラッシュ等）→ 5秒後に自動再起動
+            self._append_log("⚠️ スレッドが予期せず終了しました。5秒後に自動再起動します...")
+            self.root.after(5000, self._auto_restart)
+
+    def _auto_restart(self) -> None:
+        """クラッシュ後の自動再起動"""
+        if self._stop_event.is_set():
+            self._btn_start.config(state=tk.NORMAL)
+            self._btn_stop.config(state=tk.DISABLED)
+            return
+        self._append_log("🔄 自動再起動中...")
+        self._on_start()
 
     def _handle_message(self, msg: tuple) -> None:
         """キューから受け取ったメッセージを処理する"""

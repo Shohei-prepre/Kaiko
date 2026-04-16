@@ -339,7 +339,7 @@ def fetch_race_ids_for_date(target_date: str) -> list[str]:
     target_date: "YYYY-MM-DD" 形式
     """
     date_str = target_date.replace("-", "")
-    url = f"https://race.netkeiba.com/top/race_list.html?kaisai_date={date_str}"
+    url = f"https://race.netkeiba.com/top/race_list_sub.html?kaisai_date={date_str}"
     print(f"  → 開催一覧を取得: {url}")
     res = requests.get(url, headers=HEADERS, timeout=15)
     res.encoding = "EUC-JP"
