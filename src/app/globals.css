@@ -141,6 +141,11 @@
   }
   html {
     @apply font-sans;
+    /* Android のシステムフォントサイズ設定に引きずられないよう 16px に固定 */
+    font-size: 16px;
+    /* Android Chrome の font boosting（テキスト自動拡大）を無効化 */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
   /* iOS Safari: タップ遅延・無反応を防ぐ */
   * {
