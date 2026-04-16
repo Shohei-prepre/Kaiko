@@ -19,3 +19,4 @@ transcript_*.txt
 # エディタ
 .cursor/
 .mcp.json
+.vercel
