@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import type { RaceWithPerformances } from "@/lib/database.types";
+import type { RaceWithPerformances, HorseRating } from "@/lib/database.types";
 import BottomNav from "@/components/BottomNav";
 import BackButton from "@/components/BackButton";
 import HorseRow from "./HorseRow";
@@ -79,6 +79,21 @@ export default async function RaceDetailPage({ params }: Props) {
   const race = await getRace(id);
 
   if (!race) notFound();
+
+  // horse_ratings を一括取得してレース内ランクを計算（1=最強）
+  const ratingRankMap = new Map<number, number>();
+  const perfHorseIds = race.horse_performances
+    .map((p) => p.horse_id)
+    .filter((id): id is number => id !== null);
+  if (perfHorseIds.length > 0) {
+    const { data: ratings } = await (supabase as any)
+      .from("horse_ratings")
+      .select("horse_id, rating")
+      .in("horse_id", perfHorseIds);
+    [...((ratings ?? []) as Pick<HorseRating, "horse_id" | "rating">[])]
+      .sort((a, b) => b.rating - a.rating)
+      .forEach((r, i) => ratingRankMap.set(r.horse_id, i + 1));
+  }
 
   const lapTimesRaw = race.lap_times ?? [];
   const lapTimes: number[] = Array.isArray(lapTimesRaw)
@@ -225,7 +240,12 @@ export default async function RaceDetailPage({ params }: Props) {
           </div>
 
           {race.horse_performances.map((perf, i) => (
-            <HorseRow key={perf.id} perf={perf} isFirst={i === 0} />
+            <HorseRow
+              key={perf.id}
+              perf={perf}
+              isFirst={i === 0}
+              ratingRank={ratingRankMap.get(perf.horse_id) ?? undefined}
+            />
           ))}
         </section>
 

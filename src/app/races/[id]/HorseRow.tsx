@@ -23,12 +23,22 @@ const EVAL_TAG_STYLES: Record<string, { bg: string; text: string; border: string
   disregard: { bg: "bg-[var(--kaiko-eval-disregard-bg)]",  text: "text-[var(--kaiko-eval-disregard-text)]",  border: "border-black/8",                              label: "度外視" },
 };
 
+/** rating ランク（1=最強）からシンボルに変換 */
+function ratingRankSymbol(rank: number): string {
+  if (rank === 1) return "◎";
+  if (rank <= 3) return "○";
+  if (rank <= 6) return "△";
+  return "×";
+}
+
 interface Props {
   perf: HorsePerformance;
   isFirst?: boolean;
+  /** horse_ratings ベースのレース内ランク（1=最強）。ある場合は能力シンボルに使用 */
+  ratingRank?: number;
 }
 
-export default function HorseRow({ perf, isFirst = false }: Props) {
+export default function HorseRow({ perf, isFirst = false, ratingRank }: Props) {
   const [expanded, setExpanded] = useState(isFirst);
 
   const horse = perf.horses;
@@ -40,7 +50,8 @@ export default function HorseRow({ perf, isFirst = false }: Props) {
   const aptValue = calcAptitudeValue(perf);
   const lossValue = calcLossValue(perf);
   const abilityValue = aptValue + lossValue;
-  const symbol = abilitySymbol(abilityValue);
+  // rating ランクがある場合はグローバルレーティングベースのシンボル、なければ補正値ベースにフォールバック
+  const symbol = ratingRank !== undefined ? ratingRankSymbol(ratingRank) : abilitySymbol(abilityValue);
   const aptSymbol = abilitySymbol(aptValue);
   const lossSymbol = abilitySymbol(lossValue);
   const symColor = symbolColorClass(symbol);

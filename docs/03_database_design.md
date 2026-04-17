@@ -1,8 +1,8 @@
 # KAIKO　03. データベース設計
 
-ver 1.6　|　2026年3月
+ver 1.7　|　2026年4月
 
-> **変更点（v1.5 → v1.6）**: horse_performances テーブルに複合ユニーク制約 unique_race_horse を追加。
+> **変更点（v1.6 → v1.7）**: `horse_ratings` テーブルを追加。全馬横断の最小二乗グローバルレーティングを導入。全ページの能力指標を統一。
 
 ---
 
@@ -146,7 +146,52 @@ ADD CONSTRAINT unique_race_horse UNIQUE (race_id, horse_id);
 
 ---
 
-## 5. 将来実装テーブル（現フェーズは対象外）
+## 5. horse_ratings（グローバルレーティング）
+
+> **v1.7 で追加。** `pipeline/compute_ratings.py` がデータ投入後にバッチ計算し upsert する。フロントエンドは読み取り専用。
+
+全馬を横断した最小二乗グローバルレーティング。レースレベルの差を自動吸収し、注目馬・レース詳細・比較の全ページで統一指標として使用する。
+
+### 算出ロジック概要
+
+- 各レースの全出走馬ペア間で `adjustedDiff = 着差差 + 補正差 + track_bias` を計算
+- 全ペアをまとめて `minimize Σ w × (r_A - r_B - adjustedDiff)²` を最小化
+- 重み `w = time_weight × llm_weight`（時間減衰 0.75/年、LLM補正なし = 0.5）
+- アンカー：全対象馬の平均 = 0
+
+| カラム名 | 型 | 内容・備考 |
+| --- | --- | --- |
+| horse_id | bigint | PK。horses.horse_id と紐づく |
+| rating | float8 | 能力値（高いほど強い、全馬平均 = 0） |
+| rating_error | float8 | 残差 RMS（信頼指標。小さいほど安定） |
+| races_analyzed | int | 計算に使った走数（2走未満は非表示） |
+| connected_horses | int | グラフで繋がった他馬の数 |
+| computed_at | timestamptz | 最終計算日時 |
+
+```sql
+create table horse_ratings (
+  horse_id         bigint primary key references horses(horse_id),
+  rating           float8  not null,
+  rating_error     float8,
+  races_analyzed   int     not null,
+  connected_horses int,
+  computed_at      timestamptz not null default now()
+);
+
+-- 全ユーザーが参照可能、書き込みは管理者のみ
+alter table horse_ratings enable row level security;
+create policy "public read" on horse_ratings for select using (true);
+```
+
+### 4-1 の更新（フロント計算値）
+
+| 計算値 | 変更後の用途 |
+| --- | --- |
+| aptitude_value / loss_value / ability_value | `horse_ratings.rating` が存在する場合は補助表示のみ。rating がない馬のフォールバックとして維持 |
+
+---
+
+## 6. 将来実装テーブル（現フェーズは対象外）
 
 ### user_reviews
 
@@ -196,4 +241,4 @@ ADD CONSTRAINT unique_race_horse UNIQUE (race_id, horse_id);
 
 ---
 
-以上　— 03. データベース設計　v1.6
+以上　— 03. データベース設計　v1.7

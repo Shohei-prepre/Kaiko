@@ -7,6 +7,7 @@ import type {
   UpcomingEntryWithForm,
   RecentPerf,
   EvalTag,
+  HorseRating,
 } from "@/lib/database.types";
 import { isBuyCandidate, calcValueBetDetails, calcHorsePicks, calcAllAbilityRanks } from "@/lib/database.types";
 import { buildRaceMarginMaps } from "@/lib/parseMargin";
@@ -275,15 +276,40 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
 
   const { perfsMap, runningStyleMap } = await getRecentPerfsForHorses(horseIds);
 
+  // horse_ratings を一括取得（全馬まとめて1クエリ）
+  const ratingByHorseId = new Map<number, Pick<HorseRating, "rating" | "races_analyzed">>();
+  if (horseIds.length > 0) {
+    const { data: ratings } = await (supabase as any)
+      .from("horse_ratings")
+      .select("horse_id, rating, races_analyzed")
+      .in("horse_id", horseIds);
+    for (const r of (ratings ?? []) as Pick<HorseRating, "horse_id" | "rating" | "races_analyzed">[]) {
+      ratingByHorseId.set(r.horse_id, { rating: r.rating, races_analyzed: r.races_analyzed });
+    }
+  }
+
   const entriesWithForm: UpcomingEntryWithForm[] = resolvedEntries.map((e) => ({
     ...e,
     recentPerfs: e.horse_id ? (perfsMap.get(e.horse_id) ?? []) : [],
   }));
 
+  // レース内での rating ランクを計算（rating 降順、1=最強）
+  const raceRatingRankMap = new Map<number, number>();
+  [...entriesWithForm]
+    .filter((e) => e.horse_id != null && ratingByHorseId.has(e.horse_id!))
+    .sort((a, b) => ratingByHorseId.get(b.horse_id!)!.rating - ratingByHorseId.get(a.horse_id!)!.rating)
+    .forEach((e, i) => raceRatingRankMap.set(e.horse_id!, i + 1));
+
   const buyCandidates = entriesWithForm.filter((e) => isBuyCandidate(e.recentPerfs));
   const valueBetMap = calcValueBetDetails(entriesWithForm);
-  const picksMap = calcHorsePicks(entriesWithForm, valueBetMap);
-  const abilityRankMap = calcAllAbilityRanks(entriesWithForm);
+  const picksMap = calcHorsePicks(
+    entriesWithForm, valueBetMap, 0.3, 0.75,
+    raceRatingRankMap.size > 0 ? raceRatingRankMap : undefined
+  );
+  // rating ランクがある場合はそれを優先、なければ従来の補正スコアベースにフォールバック
+  const abilityRankMap = raceRatingRankMap.size > 0
+    ? raceRatingRankMap
+    : calcAllAbilityRanks(entriesWithForm);
 
   const gradeBadge = GRADE_BADGE[race.grade] ?? GRADE_BADGE["OP"];
   const surfaceBadge = SURFACE_BADGE[race.surface] ?? SURFACE_BADGE["芝"];

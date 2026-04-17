@@ -8,6 +8,7 @@ import type {
   RecentPerf,
   EvalTag,
   PickSymbol,
+  HorseRating,
 } from "@/lib/database.types";
 import {
   calcValueBetDetails,
@@ -99,6 +100,18 @@ async function fetchPicksData(): Promise<RaceWithPicks[]> {
       ...horseIds,
       ...Array.from(nameToIdMap.values()),
     ])];
+
+    // horse_ratings を一括取得（全馬まとめて1クエリ、ページロード時の重複クエリ防止）
+    const ratingByHorseId = new Map<number, Pick<HorseRating, "rating" | "races_analyzed">>();
+    if (allHorseIds.length > 0) {
+      const { data: ratings } = await (supabase as any)
+        .from("horse_ratings")
+        .select("horse_id, rating, races_analyzed")
+        .in("horse_id", allHorseIds);
+      for (const r of (ratings ?? []) as Pick<HorseRating, "horse_id" | "rating" | "races_analyzed">[]) {
+        ratingByHorseId.set(r.horse_id, { rating: r.rating, races_analyzed: r.races_analyzed });
+      }
+    }
 
     const recentPerfsMap = new Map<number, RecentPerf[]>();
     if (allHorseIds.length > 0) {
@@ -206,9 +219,24 @@ async function fetchPicksData(): Promise<RaceWithPicks[]> {
         return { ...e, horse_id: hid, recentPerfs: hid ? (recentPerfsMap.get(hid) ?? []) : [] };
       });
 
+      // レース内での rating ランクを計算（rating 降順、1=最強）
+      const raceRatingRankMap = new Map<number, number>();
+      [...withForm]
+        .filter((e) => e.horse_id != null && ratingByHorseId.has(e.horse_id!))
+        .sort((a, b) => ratingByHorseId.get(b.horse_id!)!.rating - ratingByHorseId.get(a.horse_id!)!.rating)
+        .forEach((e, i) => raceRatingRankMap.set(e.horse_id!, i + 1));
+
       const valueBetMap = calcValueBetDetails(withForm);
-      const picksMap = calcHorsePicks(withForm, valueBetMap);
+      const picksMap = calcHorsePicks(
+        withForm, valueBetMap, 0.3, 0.75,
+        raceRatingRankMap.size > 0 ? raceRatingRankMap : undefined
+      );
       const statsMap = calcAllHorseStats(withForm);
+      // rating ランクがある馬は statsMap の abilityRank を上書き
+      for (const [hid, rank] of raceRatingRankMap.entries()) {
+        const existing = statsMap.get(hid);
+        if (existing) statsMap.set(hid, { ...existing, abilityRank: rank });
+      }
 
       const notableEntries: PickEntry[] = [];
       for (const e of withForm) {

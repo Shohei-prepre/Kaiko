@@ -5,7 +5,7 @@ import HorseLoading from "@/components/HorseLoading";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
-import type { Horse, HorsePerformance, Race } from "@/lib/database.types";
+import type { Horse, HorsePerformance, Race, HorseRating } from "@/lib/database.types";
 import { buildRaceMarginMaps } from "@/lib/parseMargin";
 import BottomNav from "@/components/BottomNav";
 
@@ -916,6 +916,34 @@ export default function CompareClient() {
   const [benchmarkLoading, setBenchmarkLoading] = useState(false);
   const [showBenchmarkModal, setShowBenchmarkModal] = useState(false);
 
+  // horse_ratings（馬カードの参考表示用）
+  const [ratingA, setRatingA] = useState<number | null>(null);
+  const [ratingB, setRatingB] = useState<number | null>(null);
+
+  // 馬Aが変わったら horse_ratings を取得（参考表示用）
+  useEffect(() => {
+    if (!horseA) { setRatingA(null); return; }
+    const supabase = getSupabase();
+    supabase
+      .from("horse_ratings" as never)
+      .select("rating")
+      .eq("horse_id", horseA.horse.horse_id)
+      .single()
+      .then(({ data }) => setRatingA(data ? (data as Pick<HorseRating, "rating">).rating : null));
+  }, [horseA]);
+
+  // 馬Bが変わったら horse_ratings を取得（参考表示用）
+  useEffect(() => {
+    if (!horseB) { setRatingB(null); return; }
+    const supabase = getSupabase();
+    supabase
+      .from("horse_ratings" as never)
+      .select("rating")
+      .eq("horse_id", horseB.horse.horse_id)
+      .single()
+      .then(({ data }) => setRatingB(data ? (data as Pick<HorseRating, "rating">).rating : null));
+  }, [horseB]);
+
   // URL の ?horse= から馬Aを初期セット
   useEffect(() => {
     const horseId = searchParams.get("horse");
@@ -1025,6 +1053,11 @@ export default function CompareClient() {
                   <span className="text-[var(--kaiko-text-muted)]">未選択</span>
                 )}
               </h2>
+              {ratingA !== null && (
+                <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] block mt-1">
+                  rating {ratingA >= 0 ? "+" : ""}{ratingA.toFixed(2)}
+                </span>
+              )}
             </div>
             <button
               onClick={() => setModal("A")}
@@ -1056,6 +1089,11 @@ export default function CompareClient() {
                   <span className="text-[var(--kaiko-text-muted)]">未選択</span>
                 )}
               </h2>
+              {ratingB !== null && (
+                <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] block mt-1">
+                  rating {ratingB >= 0 ? "+" : ""}{ratingB.toFixed(2)}
+                </span>
+              )}
             </div>
             <button
               onClick={() => setModal("B")}

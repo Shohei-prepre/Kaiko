@@ -283,7 +283,9 @@ export function calcHorsePicks(
   entries: UpcomingEntryWithForm[],
   _valueBetMap: Map<number, ValueBetDetail>,
   k = 0.3,
-  marketWeight = 0.75
+  marketWeight = 0.75,
+  /** horse_ratings から事前計算したランクマップ。渡された場合は calcAllAbilityRanks の代わりに使用 */
+  precomputedRankMap?: Map<number, number>
 ): Map<number, HorsePick> {
   const result = new Map<number, HorsePick>();
 
@@ -321,7 +323,8 @@ export function calcHorsePicks(
   }
 
   // ── シンボル割り当て: valueScore = gap / abilityRank ─────────────
-  const abilityRankMap = calcAllAbilityRanks(entries);
+  // precomputedRankMap（horse_ratings ベース）があればそちらを優先
+  const abilityRankMap = precomputedRankMap ?? calcAllAbilityRanks(entries);
 
   const valueCandidates = entries
     .filter((e) => e.horse_id != null && e.popularity != null)
@@ -356,12 +359,25 @@ export function calcHorsePicks(
   return result;
 }
 
+// ────────── グローバルレーティング ───────────────────────────────────────────
+
+/** compute_ratings.py が計算し horse_ratings テーブルに保存するレーティング */
+export interface HorseRating {
+  horse_id: number;
+  rating: number;
+  rating_error: number | null;
+  races_analyzed: number;
+  connected_horses: number | null;
+  computed_at: string;
+}
+
 export type Database = {
   public: {
     Tables: {
       races: { Row: Race; Insert: Partial<Race>; Update: Partial<Race> };
       horses: { Row: Horse; Insert: Partial<Horse>; Update: Partial<Horse> };
       horse_performances: { Row: HorsePerformance; Insert: Partial<HorsePerformance>; Update: Partial<HorsePerformance> };
+      horse_ratings: { Row: HorseRating; Insert: Partial<HorseRating>; Update: Partial<HorseRating> };
     };
   };
 };
