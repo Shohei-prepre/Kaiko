@@ -152,10 +152,10 @@ function WeekSelectModal({
                     {w.label}
                   </span>
                   {isCurrent && (
-                    <span className="ml-2 text-[10px] font-bold text-[var(--kaiko-primary)] uppercase">This Week</span>
+                    <span className="ml-2 text-[10px] font-bold text-[var(--kaiko-primary)] uppercase">今週</span>
                   )}
                   {offset === 1 && (
-                    <span className="ml-2 text-[10px] font-bold text-[var(--kaiko-tag-green-text)] uppercase">Next Week</span>
+                    <span className="ml-2 text-[10px] font-bold text-[var(--kaiko-tag-green-text)] uppercase">来週</span>
                   )}
                 </div>
                 {isSelected && (
@@ -194,7 +194,7 @@ function UpcomingVenueCard({
       <div className="px-4 py-3 border-b border-black/8 flex justify-between items-center">
         <h2 className="text-xl font-black text-[#131313] tracking-tight">{venue.track}</h2>
         <span className="text-[11px] font-bold text-[var(--kaiko-text-muted)]">
-          {venue.races.length} RACES
+          {venue.races.length} レース
         </span>
       </div>
       <div className="divide-y divide-black/6">
@@ -457,7 +457,7 @@ export default function RacesClient() {
               key={day}
               onClick={() => setActiveDay(day)}
               style={{ touchAction: "manipulation" }}
-              className={`px-6 py-2 rounded-2xl text-sm font-bold active:opacity-70 transition-all ${
+              className={`px-6 py-2 rounded-xl text-sm font-bold active:opacity-70 transition-all ${
                 activeDay === day
                   ? "bg-[var(--kaiko-primary)] text-[#131313] shadow-sm"
                   : "bg-white border border-black/8 text-[var(--kaiko-text-muted)]"
@@ -522,7 +522,7 @@ export default function RacesClient() {
                     <div className="px-4 py-3 border-b border-black/8 flex justify-between items-center">
                       <h2 className="text-xl font-black text-[#131313] tracking-tight">{venue.track}</h2>
                       <span className="text-[11px] font-bold text-[var(--kaiko-text-muted)]">
-                        {venue.races.length} RACES
+                        {venue.races.length} レース
                       </span>
                     </div>
                     <div className="divide-y divide-black/6">
@@ -568,7 +568,7 @@ export default function RacesClient() {
         <section className="px-4 mb-12">
           <div className="flex items-end justify-between mb-3">
             <h2 className="font-black text-xl text-[#131313] tracking-tight">お知らせ</h2>
-            <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] tracking-widest uppercase">INFORMATION</span>
+            <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] tracking-widest uppercase">基本情報</span>
           </div>
           <div className="bg-white border border-black/8 rounded-xl overflow-hidden">
             {NOTICES.map((n, i) => (

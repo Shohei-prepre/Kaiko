@@ -59,6 +59,22 @@ const GRADE_STYLE: Record<string, string> = {
 const NOTABLE_SYMBOLS: PickSymbol[] = ["◎", "○", "▲", "△", "★"];
 
 /**
+ * 現在の週の土曜・日曜の日付文字列を返す（ローカル日時ベース）
+ */
+function getWeekRange(): { sat: string; sun: string } {
+  const today = new Date();
+  const day = today.getDay(); // 0=日, 6=土
+  const diffToSat = day === 0 ? -1 : 6 - day;
+  const sat = new Date(today);
+  sat.setDate(today.getDate() + diffToSat);
+  const sun = new Date(sat);
+  sun.setDate(sat.getDate() + 1);
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return { sat: fmt(sat), sun: fmt(sun) };
+}
+
+/**
  * 日付文字列を「X月Y日」形式に変換
  */
 function formatDate(d: string) {
@@ -69,11 +85,25 @@ function formatDate(d: string) {
 // ─── メインコンポーネント ────────────────────────────────────────
 
 export default function PicksClient({ races }: { races: RaceWithPicks[] }) {
+  const [activeDay, setActiveDay] = useState<"sat" | "sun">("sun");
   const [expandedRaces, setExpandedRaces] = useState<Set<string>>(
     () => new Set(races.length > 0 ? [races[0].raceId] : [])
   );
 
   const totalHorses = races.reduce((sum, r) => sum + r.entries.length, 0);
+
+  // 今週の土日の日付文字列
+  const { sat, sun } = getWeekRange();
+  const dateStr = activeDay === "sat" ? sat : sun;
+
+  // 選択曜日でフィルタ → 競馬場でグループ化
+  const filteredRaces = races.filter((r) => r.raceDate === dateStr);
+  const byVenue = filteredRaces.reduce<Record<string, RaceWithPicks[]>>((acc, r) => {
+    if (!acc[r.track]) acc[r.track] = [];
+    acc[r.track].push(r);
+    return acc;
+  }, {});
+  const venueList = Object.entries(byVenue);
 
   /**
    * レースの展開・折りたたみを切り替える
@@ -104,16 +134,39 @@ export default function PicksClient({ races }: { races: RaceWithPicks[] }) {
       </header>
 
       <main className="pt-16 pb-28 max-w-md mx-auto">
+        {/* 曜日タブ */}
+        <div className="flex gap-2 px-3 pt-3 pb-2">
+          {(["sat", "sun"] as const).map((day) => (
+            <button
+              key={day}
+              onClick={() => setActiveDay(day)}
+              style={{ touchAction: "manipulation" }}
+              className={`px-6 py-2 rounded-xl text-sm font-bold active:opacity-70 transition-all ${
+                activeDay === day
+                  ? "bg-[var(--kaiko-primary)] text-[#131313] shadow-sm"
+                  : "bg-white border border-black/8 text-[var(--kaiko-text-muted)]"
+              }`}
+            >
+              {day === "sat" ? "土曜日" : "日曜日"}
+            </button>
+          ))}
+        </div>
+
         {races.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 gap-3 text-[var(--kaiko-text-muted)]">
+          <div className="flex flex-col items-center justify-center h-64 gap-3 text-[var(--kaiko-text-muted)] px-3">
             <span className="material-symbols-outlined text-[48px]">search_off</span>
             <p className="text-sm font-bold">注目馬がいません</p>
             <p className="text-[11px] text-center leading-relaxed">
               直近の未来レースに印のついた馬を表示します
             </p>
           </div>
+        ) : venueList.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-48 gap-3 text-[var(--kaiko-text-muted)] px-3">
+            <span className="material-symbols-outlined text-[40px]">event_busy</span>
+            <p className="text-sm font-bold">該当日のレースがありません</p>
+          </div>
         ) : (
-          <div className="px-3 pt-3 space-y-3">
+          <div className="px-3 space-y-4">
             {/* 凡例 */}
             <div className="flex flex-wrap gap-2 px-1 pb-1">
               {NOTABLE_SYMBOLS.map((sym) => (
@@ -123,68 +176,81 @@ export default function PicksClient({ races }: { races: RaceWithPicks[] }) {
               ))}
             </div>
 
-            {races.map((race) => {
-              const isExpanded = expandedRaces.has(race.raceId);
-              const gradeStyle = GRADE_STYLE[race.grade] ?? "text-[var(--kaiko-text-muted)] border-black/10 bg-black/4";
-
-              return (
-                <div key={race.raceId} className="bg-white rounded-2xl border border-black/8 overflow-hidden">
-                  <button
-                    onClick={() => toggleRace(race.raceId)}
-                    className="w-full px-4 py-3 flex items-center gap-2 text-left hover:bg-black/4 active:bg-black/5 transition-colors"
-                  >
-                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border ${gradeStyle} uppercase shrink-0`}>
-                      {race.grade}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-1.5">
-                        {race.raceNumber !== null && (
-                          <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] shrink-0">
-                            R{race.raceNumber}
-                          </span>
-                        )}
-                        <div className="text-[13px] font-black text-[#131313] truncate">
-                          {race.raceName}
-                        </div>
-                      </div>
-                      <div className="text-[10px] text-[var(--kaiko-text-muted)]">
-                        {formatDate(race.raceDate)} · {race.track} · {race.surface}{race.distance}m
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-[11px] font-bold text-[var(--kaiko-text-muted)]">
-                        {race.entries.length}頭
-                      </span>
-                      <span className="material-symbols-outlined text-[var(--kaiko-text-muted)] text-[18px]">
-                        {isExpanded ? "expand_less" : "expand_more"}
-                      </span>
-                    </div>
-                  </button>
-
-                  <div className="px-4 pb-1 -mt-1">
-                    <Link
-                      href={`/races/upcoming/${race.raceId}`}
-                      className="text-[10px] text-[var(--kaiko-primary)] font-bold flex items-center gap-0.5"
-                    >
-                      <span className="material-symbols-outlined text-[12px]">open_in_new</span>
-                      レース詳細を見る
-                    </Link>
-                  </div>
-
-                  {isExpanded && (
-                    <div className="border-t border-black/8">
-                      {race.entries.map((entry, i) => (
-                        <PickHorseRow
-                          key={entry.entryId}
-                          entry={entry}
-                          isLast={i === race.entries.length - 1}
-                        />
-                      ))}
-                    </div>
-                  )}
+            {/* 競馬場ごとにグループ表示 */}
+            {venueList.map(([track, trackRaces]) => (
+              <div key={track}>
+                {/* 競馬場ヘッダー */}
+                <div className="flex items-center gap-2 px-1 pb-2">
+                  <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-[16px]">location_on</span>
+                  <span className="text-[12px] font-black text-[#131313] uppercase tracking-wider">{track}</span>
                 </div>
-              );
-            })}
+
+                {/* レース一覧 */}
+                <div className="space-y-2">
+                  {trackRaces.map((race) => {
+                    const isExpanded = expandedRaces.has(race.raceId);
+                    const gradeStyle = GRADE_STYLE[race.grade] ?? "text-[var(--kaiko-text-muted)] border-black/10 bg-black/4";
+
+                    return (
+                      <div key={race.raceId} className="bg-white rounded-xl border border-black/8 overflow-hidden">
+                        <button
+                          onClick={() => toggleRace(race.raceId)}
+                          className="w-full px-4 py-3 flex items-center gap-2 text-left hover:bg-black/4 active:bg-black/5 transition-colors"
+                        >
+                          <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border ${gradeStyle} uppercase shrink-0`}>
+                            {race.grade}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-baseline gap-1.5">
+                              {race.raceNumber !== null && (
+                                <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] shrink-0">
+                                  R{race.raceNumber}
+                                </span>
+                              )}
+                              <div className="text-[13px] font-black text-[#131313] truncate">
+                                {race.raceName}
+                              </div>
+                            </div>
+                            <div className="text-[10px] text-[var(--kaiko-text-muted)]">
+                              {formatDate(race.raceDate)} · {race.track} · {race.surface}{race.distance}m
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[11px] font-bold text-[var(--kaiko-text-muted)]">
+                              {race.entries.length}頭
+                            </span>
+                            <span className="material-symbols-outlined text-[var(--kaiko-text-muted)] text-[18px]">
+                              {isExpanded ? "expand_less" : "expand_more"}
+                            </span>
+                          </div>
+                        </button>
+
+                        <div className="px-4 pb-1 -mt-1">
+                          <Link
+                            href={`/races/upcoming/${race.raceId}`}
+                            className="text-[10px] text-[var(--kaiko-primary)] font-bold flex items-center gap-0.5"
+                          >
+                            レースの詳細を見る
+                          </Link>
+                        </div>
+
+                        {isExpanded && (
+                          <div className="border-t border-black/8">
+                            {race.entries.map((entry, i) => (
+                              <PickHorseRow
+                                key={entry.entryId}
+                                entry={entry}
+                                isLast={i === race.entries.length - 1}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </main>
@@ -271,7 +337,7 @@ function PickHorseRow({ entry, isLast }: { entry: PickEntry; isLast: boolean }) 
 
       {/* 展開パネル */}
       {expanded && (
-        <div className="mx-4 mb-3 rounded-2xl border bg-black/5 border-white/12 p-3 space-y-2.5">
+        <div className="mx-4 mb-3 rounded-xl border bg-black/5 border-white/12 p-3 space-y-2.5">
 
           {/* ヘッダー：印 + ラベル + EV */}
           <div className="flex items-center gap-2">
@@ -292,7 +358,7 @@ function PickHorseRow({ entry, isLast }: { entry: PickEntry; isLast: boolean }) 
           </div>
 
           {/* 推定勝率（? ツールチップ付き・プログレスバー） */}
-          <div className="bg-black/5 rounded-2xl p-2.5">
+          <div className="bg-black/5 rounded-xl p-2.5">
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-1.5">
                 <span className="text-[11px] font-bold text-[var(--kaiko-text-muted)] uppercase tracking-wider">推定勝率</span>
@@ -321,7 +387,7 @@ function PickHorseRow({ entry, isLast }: { entry: PickEntry; isLast: boolean }) 
 
           {/* 能力データ */}
           {entry.stats ? (
-            <div className="bg-black/5 rounded-2xl border border-black/8 p-2.5 space-y-2">
+            <div className="bg-black/5 rounded-xl border border-black/8 p-2.5 space-y-2">
               {/* 能力推定ランク（王冠アイコン付き） */}
               <div className="flex items-center justify-between">
                 <span className="text-[11px] text-[var(--kaiko-text-muted)]">能力推定ランク</span>
@@ -363,7 +429,7 @@ function PickHorseRow({ entry, isLast }: { entry: PickEntry; isLast: boolean }) 
               <p className="text-[10px] text-[var(--kaiko-text-muted)]">分析走数: {entry.stats.racesAnalyzed}走</p>
             </div>
           ) : (
-            <div className="bg-black/5 border border-black/8 rounded-2xl px-3 py-2 text-center">
+            <div className="bg-black/5 border border-black/8 rounded-xl px-3 py-2 text-center">
               <span className="text-[10px] text-[var(--kaiko-text-muted)]">近走データ不足のため能力データなし</span>
             </div>
           )}

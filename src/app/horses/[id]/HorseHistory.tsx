@@ -56,11 +56,7 @@ export default function HorseHistory({ perfs }: Props) {
         const aptValue = calcAptitudeValue(perf);
         const lossValue = calcLossValue(perf);
         const symbol = abilitySymbol(aptValue + lossValue);
-        const aptSymbol = abilitySymbol(aptValue);
-        const lossSymbol = abilitySymbol(lossValue);
         const symColor = symbolColorClass(symbol);
-        const aptColor = symbolColorClass(aptSymbol);
-        const lossColor = symbolColorClass(lossSymbol);
 
         const CORRECTION_ITEMS = [
           { key: "pace_effect_value" as keyof HorsePerformance, label: "展開・ペース", summaryKey: "pace_effect_summary" as keyof HorsePerformance },
@@ -99,19 +95,7 @@ export default function HorseHistory({ perfs }: Props) {
                 {/* 評価ブロック */}
                 <div className="flex flex-col items-end gap-1.5 shrink-0">
                   {!isDisregard ? (
-                    <div className="flex items-center gap-0.5">
-                      <span className={`text-[15px] font-black leading-none ${symColor}`}>{symbol}</span>
-                      <div className="flex gap-0.5 ml-1">
-                        <div className="bg-black/6 border border-black/8 rounded-lg px-1 py-0.5 flex items-center gap-0.5">
-                          <span className="text-[7px] font-black text-[var(--kaiko-text-muted)]">適</span>
-                          <span className={`text-[10px] font-black leading-none ${aptColor}`}>{aptSymbol}</span>
-                        </div>
-                        <div className="bg-black/6 border border-black/8 rounded-lg px-1 py-0.5 flex items-center gap-0.5">
-                          <span className="text-[7px] font-black text-[var(--kaiko-text-muted)]">ロ</span>
-                          <span className={`text-[10px] font-black leading-none ${lossColor}`}>{lossSymbol}</span>
-                        </div>
-                      </div>
-                    </div>
+                    <span className={`text-[15px] font-black leading-none ${symColor}`}>{symbol}</span>
                   ) : (
                     <span className="text-[15px] font-black text-[var(--kaiko-text-muted)] leading-none">—</span>
                   )}
@@ -142,19 +126,19 @@ export default function HorseHistory({ perfs }: Props) {
                 {/* 基本情報 */}
                 <div className="grid grid-cols-3 gap-2">
                   {perf.weight_carried && (
-                    <div className="bg-black/6 border border-black/8 rounded-2xl p-2 text-center">
+                    <div className="bg-black/6 border border-black/8 rounded-xl p-2 text-center">
                       <span className="text-[9px] font-black text-[var(--kaiko-text-muted)] block">斤量</span>
                       <span className="text-[13px] font-black text-[#131313]">{perf.weight_carried}kg</span>
                     </div>
                   )}
                   {perf.horse_weight && (
-                    <div className="bg-black/6 border border-black/8 rounded-2xl p-2 text-center">
+                    <div className="bg-black/6 border border-black/8 rounded-xl p-2 text-center">
                       <span className="text-[9px] font-black text-[var(--kaiko-text-muted)] block">馬体重</span>
                       <span className="text-[13px] font-black text-[#131313]">{perf.horse_weight}</span>
                     </div>
                   )}
                   {perf.position_order && (
-                    <div className="bg-black/6 border border-black/8 rounded-2xl p-2 text-center">
+                    <div className="bg-black/6 border border-black/8 rounded-xl p-2 text-center">
                       <span className="text-[9px] font-black text-[var(--kaiko-text-muted)] block">通過順</span>
                       <span className="text-[13px] font-black text-[#131313]">{perf.position_order}</span>
                     </div>
@@ -162,7 +146,7 @@ export default function HorseHistory({ perfs }: Props) {
                 </div>
 
                 {/* 補正値テーブル */}
-                <div className="bg-black/6 border border-black/8 rounded-2xl overflow-hidden">
+                <div className="bg-black/6 border border-black/8 rounded-xl overflow-hidden">
                   {CORRECTION_ITEMS.map((item) => {
                     const val = perf[item.key] as number | null ?? 0;
                     const summary = perf[item.summaryKey] as string | null;
@@ -191,13 +175,10 @@ export default function HorseHistory({ perfs }: Props) {
                 {/* レースへのリンク */}
                 <Link
                   href={`/races/${race.race_id}`}
-                  className="flex items-center justify-between gap-2 bg-black/6 border border-black/8 rounded-2xl px-3 py-2.5 hover:bg-black/8 active:opacity-70 transition-opacity"
+                  className="flex items-center justify-between gap-2 bg-black/6 border border-black/8 rounded-xl px-3 py-2.5 hover:bg-black/8 active:opacity-70 transition-opacity"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-[16px] shrink-0">open_in_new</span>
-                    <span className="text-[11px] font-bold text-[var(--kaiko-primary)] truncate">{race.race_name}のレース詳細</span>
-                  </div>
+                  <span className="text-[11px] font-bold text-[var(--kaiko-primary)] truncate">レースの詳細を見る</span>
                   <span className="material-symbols-outlined text-[14px] text-[var(--kaiko-text-muted)] shrink-0">chevron_right</span>
                 </Link>
               </div>

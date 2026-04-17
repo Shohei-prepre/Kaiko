@@ -106,7 +106,7 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
   const GRID_COLS = "34px 26px 24px 1fr 46px 56px";
 
   return (
-    <section className="bg-white rounded-2xl overflow-hidden border border-black/8">
+    <section className="bg-white rounded-xl overflow-hidden border border-black/8">
       {/* テーブルヘッダー */}
       <div
         className="grid gap-2 px-3 py-2.5 bg-black/4 border-b border-black/8 items-center"
@@ -317,7 +317,7 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
 
               {/* 展開パネル（pickがある場合のみ） */}
               {isExpanded && pick && pickStyle && (
-                <div className="mx-3 mb-3 rounded-2xl border bg-black/5 border-white/12 p-3 space-y-2.5">
+                <div className="mx-3 mb-3 rounded-xl border bg-black/5 border-white/12 p-3 space-y-2.5">
 
                   <div className="flex items-center gap-2">
                     <span className={`text-[22px] font-black leading-none ${pickStyle.text} ${pickStyle.weight}`}>
@@ -339,7 +339,7 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
                   </div>
 
                   {/* 推定勝率 */}
-                  <div className="bg-black/5 rounded-2xl p-2.5">
+                  <div className="bg-black/5 rounded-xl p-2.5">
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-1.5">
                         <span className="text-[11px] font-bold text-[var(--kaiko-text-muted)] uppercase tracking-wider">推定勝率</span>
@@ -370,7 +370,7 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
 
                   {/* 能力推定ランク（vbDetailがある場合のみ） */}
                   {vbDetail && (
-                    <div className="bg-black/5 rounded-2xl border border-black/8 p-2.5 space-y-2">
+                    <div className="bg-black/5 rounded-xl border border-black/8 p-2.5 space-y-2">
                       {/* 能力推定ランク（王冠アイコン付き） */}
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] text-[var(--kaiko-text-muted)]">能力推定ランク</span>
@@ -387,7 +387,7 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
                               emoji_events
                             </span>
                           )}
-                          <span className={`text-[22px] font-black leading-none ${
+                          <span className={`text-[16px] font-black leading-none ${
                             vbDetail.abilityRank === 1 ? "text-[var(--kaiko-primary)]" :
                             vbDetail.abilityRank === 2 ? "text-slate-500" :
                             vbDetail.abilityRank === 3 ? "text-amber-600" :
@@ -399,7 +399,7 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
                       {/* 現在人気 */}
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] text-[var(--kaiko-text-muted)]">現在人気</span>
-                        <span className={`text-[18px] font-black leading-none px-2 py-0.5 rounded-xl ${
+                        <span className={`text-[14px] font-black leading-none px-2 py-0.5 rounded-xl ${
                           vbDetail.oddsRank <= 3
                             ? "bg-[var(--kaiko-primary)] text-[#131313]"
                             : vbDetail.oddsRank <= 6
@@ -415,7 +415,7 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
 
                   {/* 近走成績 */}
                   {entry.recentPerfs.length > 0 && (
-                    <div className="bg-black/5 rounded-2xl p-2.5">
+                    <div className="bg-black/5 rounded-xl p-2.5">
                       <p className="text-[11px] font-black text-[var(--kaiko-text-muted)] mb-2 uppercase tracking-wider">近走成績</p>
                       <div className="space-y-1.5">
                         {entry.recentPerfs.slice(0, 3).map((perf, i) => {

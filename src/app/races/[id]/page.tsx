@@ -132,7 +132,7 @@ export default async function RaceDetailPage({ params }: Props) {
       <main className="pt-16 px-3 max-w-md mx-auto pb-28 space-y-3">
 
         {/* レース概要カード */}
-        <section className="bg-white rounded-2xl overflow-hidden border border-black/8">
+        <section className="bg-white rounded-xl overflow-hidden border border-black/8">
           <div className="h-1 bg-[var(--kaiko-primary)] w-full" />
           <div className="p-5">
             <div className="flex items-start justify-between mb-3">
@@ -166,16 +166,16 @@ export default async function RaceDetailPage({ params }: Props) {
 
         {/* 情報グリッド */}
         <section className="grid grid-cols-2 gap-2">
-          <div className="bg-white border border-black/8 rounded-2xl p-4">
-            <span className="text-[11px] uppercase text-[var(--kaiko-text-muted)] font-bold block mb-1 tracking-widest">Pace</span>
+          <div className="bg-white border border-black/8 rounded-xl p-4">
+            <span className="text-[11px] text-[var(--kaiko-text-muted)] font-bold block mb-1 tracking-widest">ペース</span>
             <span className="text-sm font-bold text-[#131313]">{race.pace ?? "—"}</span>
           </div>
-          <div className="bg-white border border-black/8 rounded-2xl p-4">
-            <span className="text-[11px] uppercase text-[var(--kaiko-text-muted)] font-bold block mb-1 tracking-widest">Track Bias</span>
+          <div className="bg-white border border-black/8 rounded-xl p-4">
+            <span className="text-[11px] text-[var(--kaiko-text-muted)] font-bold block mb-1 tracking-widest">トラックバイアス</span>
             <span className="text-sm font-bold text-[#131313]">{race.track_bias_summary ?? "—"}</span>
           </div>
           {race.pace_summary && (
-            <div className="col-span-2 bg-white border border-black/8 rounded-2xl p-4">
+            <div className="col-span-2 bg-white border border-black/8 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-2">
                 <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-[18px]">analytics</span>
                 <span className="text-[11px] font-bold text-[#131313] uppercase tracking-widest">展開サマリー</span>
@@ -187,9 +187,9 @@ export default async function RaceDetailPage({ params }: Props) {
 
         {/* ラップタイム */}
         {lapTimes.length > 0 && (
-          <section className="bg-white rounded-2xl border border-black/8 p-5">
+          <section className="bg-white rounded-xl border border-black/8 p-5">
             <div className="flex justify-between items-center mb-5">
-              <span className="text-[11px] uppercase text-[var(--kaiko-text-muted)] font-bold tracking-widest">Lap Time Analysis</span>
+              <span className="text-[11px] text-[var(--kaiko-text-muted)] font-bold tracking-widest">ラップタイム分析</span>
               <span className="text-[11px] font-bold text-[var(--kaiko-primary)] uppercase">
                 前半 {firstHalf} / 後半 {secondHalf}
               </span>
@@ -227,7 +227,7 @@ export default async function RaceDetailPage({ params }: Props) {
           </span>
         </div>
 
-        <section className="bg-white rounded-2xl overflow-hidden border border-black/8">
+        <section className="bg-white rounded-xl overflow-hidden border border-black/8">
           {/* テーブルヘッダー */}
           <div
             className="grid gap-2 px-3 py-3 bg-black/4 border-b border-black/8 items-center"
@@ -253,7 +253,7 @@ export default async function RaceDetailPage({ params }: Props) {
         <div className="pt-2">
           <Link
             href={`/compare`}
-            className="w-full bg-[var(--kaiko-primary)] text-[#131313] py-4 rounded-3xl font-black text-[14px] font-[family-name:var(--font-noto-sans-jp)] tracking-wider flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+            className="w-full bg-[var(--kaiko-primary)] text-[#131313] py-4 rounded-2xl font-black text-[14px] font-[family-name:var(--font-noto-sans-jp)] tracking-wider flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
           >
             能力比較に追加する
             <span className="material-symbols-outlined text-xl">arrow_forward</span>

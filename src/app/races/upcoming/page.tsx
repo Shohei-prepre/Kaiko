@@ -34,18 +34,17 @@ function formatDate(dateStr: string): string {
   return `${d.getMonth() + 1}月${d.getDate()}日（${days[d.getDay()]}）`;
 }
 
-const GRADE_BADGE: Record<string, string> = {
-  G1: "bg-amber-500 text-white",
-  G2: "bg-gray-500 text-white",
-  G3: "bg-gray-400 text-white",
-  OP: "border border-[var(--kaiko-border)] text-[var(--kaiko-text-sub)]",
+const GRADE_BADGE: Record<string, { border: string; bg: string; text: string }> = {
+  G1: { border: "border-[var(--kaiko-primary)]/40", bg: "bg-[var(--kaiko-primary)]/10", text: "text-[var(--kaiko-primary)]" },
+  G2: { border: "border-[var(--kaiko-primary)]/40", bg: "bg-[var(--kaiko-primary)]/10", text: "text-[var(--kaiko-primary)]" },
+  G3: { border: "border-black/10", bg: "bg-black/6", text: "text-[var(--kaiko-text-muted)]" },
+  OP: { border: "border-black/8",  bg: "bg-black/5", text: "text-[var(--kaiko-text-muted)]" },
 };
 
 function GradeBadge({ grade }: { grade: string }) {
-  const cls = GRADE_BADGE[grade];
-  if (!cls) return null;
+  const style = GRADE_BADGE[grade] ?? GRADE_BADGE["OP"];
   return (
-    <span className={`text-[10px] font-bold px-1.5 py-0.5 font-[family-name:var(--font-rajdhani)] ${cls}`}>
+    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${style.border} ${style.bg} ${style.text}`}>
       {grade}
     </span>
   );
