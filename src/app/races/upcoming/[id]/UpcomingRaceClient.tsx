@@ -13,13 +13,13 @@ export const PICK_SYMBOLS: PickSymbol[] = ["◎", "○", "▲", "△"];
 // ── 調整パラメータ（チューニング用定数） ─────────────────────────────────────
 
 /** 展開有利/不利で加減するレーティング点数（≈馬身数） */
-const PACE_ADJUSTMENT = 0.6;
+const PACE_ADJUSTMENT = 0.7;
 
 /** バイアス強度別の補正量（◎=強い偏り〜×=なし） */
 const BIAS_MAGNITUDE: Record<string, number> = {
-  "◎": 0.5,
-  "○": 0.3,
-  "△": 0.1,
+  "◎": 0.6,
+  "○": 0.4,
+  "△": 0.2,
   "×": 0.0,
 };
 
