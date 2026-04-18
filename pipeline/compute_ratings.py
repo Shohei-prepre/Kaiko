@@ -124,19 +124,30 @@ def build_cum_margins(perfs: list[dict]) -> dict[int, float]:
     """
     同一レースの全馬 perf から horse_id → 1着からの累積着差を構築する。
     margin は float（DB保存の数値）として受け取る。1着 = 0.0。
+
+    有効な margin データが1件もない場合は空のdictを返す。
+    adjusted_diff 側が着順差×0.5 のフォールバックを使うようにするため。
+    （margin が全て NULL のレースで全馬の cum=0 → base_diff=0 になるバグを防ぐ）
     """
     sorted_perfs = sorted(perfs, key=lambda p: p["finish_order"])
     result: dict[int, float] = {}
     cum = 0.0
+    has_valid_margin = False
+
     for p in sorted_perfs:
         if p["finish_order"] == 1:
             result[p["horse_id"]] = 0.0
         else:
             m = p.get("margin")
             # NaN・None・文字列は 0 扱い
-            if m is not None and isinstance(m, (int, float)) and m == m:
+            if m is not None and isinstance(m, (int, float)) and m == m and float(m) > 0:
                 cum += float(m)
+                has_valid_margin = True
             result[p["horse_id"]] = cum
+
+    # 有効な着差データがないレースは空dictを返す → adjusted_diff が着順ベースにフォールバック
+    if not has_valid_margin:
+        return {}
     return result
 
 
