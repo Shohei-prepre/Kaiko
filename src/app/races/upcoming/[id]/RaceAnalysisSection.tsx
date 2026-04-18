@@ -129,7 +129,6 @@ export default function RaceAnalysisSection({
           {trackBiasSummary ? (
             <>
               <p className="text-[12px] font-bold text-[#131313] leading-snug">{trackBiasSummary}</p>
-              <p className="text-[10px] text-[var(--kaiko-text-muted)] mt-1.5">X投稿をもとにAIが分析</p>
             </>
           ) : (
             <p className="text-[12px] text-[var(--kaiko-text-muted)]">なし</p>
