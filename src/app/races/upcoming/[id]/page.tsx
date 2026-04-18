@@ -322,6 +322,7 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
   const picksArr = Array.from(picksMap.entries());
   const runningStyleArr = Array.from(runningStyleMap.entries());
   const abilityRankArr = Array.from(abilityRankMap.entries());
+  const ratingArr: [number, number][] = [...ratingByHorseId.entries()].map(([hid, r]) => [hid, r.rating]);
 
   return (
     <>
@@ -424,6 +425,7 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
           runningStyleMap={runningStyleArr}
           abilityRankMap={abilityRankArr}
           picksMap={picksArr}
+          ratingMap={ratingArr}
         />
 
         {/* 次走買い候補サマリー */}

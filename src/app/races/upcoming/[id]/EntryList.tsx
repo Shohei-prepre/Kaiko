@@ -6,6 +6,56 @@ import type { UpcomingEntryWithForm, RecentPerf } from "@/lib/database.types";
 import type { ValueBetDetail, HorsePick } from "@/lib/database.types";
 import { isBuyCandidate } from "@/lib/database.types";
 
+function generateAbilityExplanation(
+  abilityRank: number,
+  racesAnalyzed: number,
+  recentPerfs: RecentPerf[]
+): string {
+  const belowCount = recentPerfs.filter((p) => p.eval_tag === "below").length;
+  const aboveCount = recentPerfs.filter((p) => p.eval_tag === "above").length;
+  const disregardCount = recentPerfs.filter((p) => p.eval_tag === "disregard").length;
+
+  let evalPhrase = "";
+  if (belowCount >= 2) {
+    evalPhrase = "近走は不利・ロスが重なっており、巻き返しが期待できます。";
+  } else if (belowCount === 1 && disregardCount >= 1) {
+    evalPhrase = "不利やアクシデントを含む走りがあり、額面以上の力を持つ可能性があります。";
+  } else if (aboveCount >= 2) {
+    evalPhrase = "近走は条件に恵まれた面があり、着順ほどの実力差はない可能性があります。";
+  } else if (disregardCount >= 1) {
+    evalPhrase = "度外視すべき走りを含んでいます。";
+  } else {
+    evalPhrase = "概ね実力通りの走りが続いています。";
+  }
+
+  let rankPhrase = "";
+  if (abilityRank === 1) {
+    rankPhrase = "能力推定はメンバー最上位です。";
+  } else if (abilityRank <= 3) {
+    rankPhrase = `能力推定は上位${abilityRank}番手です。`;
+  } else {
+    rankPhrase = `能力推定は${abilityRank}番手の評価です。`;
+  }
+
+  return `過去${racesAnalyzed}走を分析。${evalPhrase}${rankPhrase}`;
+}
+
+function computeSoftmaxProb(
+  targetHorseId: number,
+  ratingMap: Map<number, number>
+): number | null {
+  const targetRating = ratingMap.get(targetHorseId);
+  if (targetRating === undefined) return null;
+
+  const allRatings = [...ratingMap.values()];
+  if (allRatings.length === 0) return null;
+
+  // softmax: exp(r_i) / Σ exp(r_j)
+  const expValues = allRatings.map((r) => Math.exp(r));
+  const sumExp = expValues.reduce((a, b) => a + b, 0);
+  return (Math.exp(targetRating) / sumExp) * 100;
+}
+
 // 枠番色（馬番バッジの背景色として使用）
 const WAKU_NUM_STYLE: Record<number, { bg: string; text: string }> = {
   1: { bg: "bg-white",          text: "text-[#131313]" },
@@ -91,9 +141,10 @@ interface Props {
   picksMap: [number, HorsePick][];
   runningStyleMap: [number, string][];
   abilityRankMap: [number, number][];
+  ratingMap: [number, number][];
 }
 
-export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, picksMap: picksArr, runningStyleMap: runningStyleArr, abilityRankMap: abilityRankArr }: Props) {
+export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, picksMap: picksArr, runningStyleMap: runningStyleArr, abilityRankMap: abilityRankArr, ratingMap: ratingArr }: Props) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [showWinProbTooltipId, setShowWinProbTooltipId] = useState<number | null>(null);
 
@@ -101,6 +152,7 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
   const picksMap = new Map<number, HorsePick>(picksArr);
   const runningStyleMap = new Map<number, string>(runningStyleArr);
   const abilityRankMap = new Map<number, number>(abilityRankArr);
+  const ratingMap = new Map<number, number>(ratingArr);
 
   // グリッド列定義：人気 | 馬番 | 印 | 馬名 | 能力 | 単勝/近走
   const GRID_COLS = "34px 26px 24px 1fr 46px 56px";
@@ -369,49 +421,82 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
                   </div>
 
                   {/* 能力推定ランク（vbDetailがある場合のみ） */}
-                  {vbDetail && (
-                    <div className="bg-black/5 rounded-xl border border-black/8 p-2.5 space-y-2">
-                      {/* 能力推定ランク（王冠アイコン付き） */}
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] text-[var(--kaiko-text-muted)]">能力推定ランク</span>
-                        <div className="flex items-center gap-1.5">
-                          {vbDetail.abilityRank <= 3 && (
-                            <span
-                              className={`material-symbols-outlined text-[18px] ${
-                                vbDetail.abilityRank === 1 ? "text-[var(--kaiko-primary)]" :
-                                vbDetail.abilityRank === 2 ? "text-slate-500" :
-                                "text-amber-600"
-                              }`}
-                              style={{ fontVariationSettings: "'FILL' 1" }}
-                            >
-                              emoji_events
-                            </span>
-                          )}
-                          <span className={`text-[16px] font-black leading-none ${
-                            vbDetail.abilityRank === 1 ? "text-[var(--kaiko-primary)]" :
-                            vbDetail.abilityRank === 2 ? "text-slate-500" :
-                            vbDetail.abilityRank === 3 ? "text-amber-600" :
-                            "text-[var(--kaiko-text-muted)]"
-                          }`}>{vbDetail.abilityRank}位</span>
+                  {vbDetail && (() => {
+                    const ratingWinProb = entry.horse_id != null
+                      ? computeSoftmaxProb(entry.horse_id, ratingMap)
+                      : null;
+                    const explanation = generateAbilityExplanation(
+                      vbDetail.abilityRank,
+                      vbDetail.racesAnalyzed,
+                      entry.recentPerfs
+                    );
+                    return (
+                      <div className="bg-black/5 rounded-xl border border-black/8 p-2.5 space-y-2">
+                        {/* 能力推定ランク（王冠アイコン付き） */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-[var(--kaiko-text-muted)]">能力推定ランク</span>
+                          <div className="flex items-center gap-1.5">
+                            {vbDetail.abilityRank <= 3 && (
+                              <span
+                                className={`material-symbols-outlined text-[18px] ${
+                                  vbDetail.abilityRank === 1 ? "text-[var(--kaiko-primary)]" :
+                                  vbDetail.abilityRank === 2 ? "text-slate-500" :
+                                  "text-amber-600"
+                                }`}
+                                style={{ fontVariationSettings: "'FILL' 1" }}
+                              >
+                                emoji_events
+                              </span>
+                            )}
+                            <span className={`text-[16px] font-black leading-none ${
+                              vbDetail.abilityRank === 1 ? "text-[var(--kaiko-primary)]" :
+                              vbDetail.abilityRank === 2 ? "text-slate-500" :
+                              vbDetail.abilityRank === 3 ? "text-amber-600" :
+                              "text-[var(--kaiko-text-muted)]"
+                            }`}>{vbDetail.abilityRank}位</span>
+                          </div>
                         </div>
-                      </div>
 
-                      {/* 現在人気 */}
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] text-[var(--kaiko-text-muted)]">現在人気</span>
-                        <span className={`text-[14px] font-black leading-none px-2 py-0.5 rounded-xl ${
-                          vbDetail.oddsRank <= 3
-                            ? "bg-[var(--kaiko-primary)] text-[#131313]"
-                            : vbDetail.oddsRank <= 6
-                            ? "bg-black/8 text-[#131313]"
-                            : "bg-black/5 text-[var(--kaiko-text-muted)]"
-                        }`}>{vbDetail.oddsRank}番人気</span>
-                      </div>
+                        {/* 自然言語説明 */}
+                        <p className="text-[11px] text-[#131313] leading-snug">{explanation}</p>
 
-                      {/* 分析走数（小さめ補足） */}
-                      <p className="text-[10px] text-[var(--kaiko-text-muted)]">分析走数: {vbDetail.racesAnalyzed}走</p>
-                    </div>
-                  )}
+                        {/* レーティングベース推定勝率 */}
+                        {ratingWinProb !== null && (
+                          <div className="pt-1 border-t border-black/8">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase tracking-wider">推定勝率（レーティング）</span>
+                              <span className={`text-[14px] font-black leading-none ${
+                                ratingWinProb >= 20 ? "text-[var(--kaiko-primary)]" :
+                                ratingWinProb >= 10 ? "text-[#131313]" :
+                                "text-[var(--kaiko-text-muted)]"
+                              }`}>{ratingWinProb.toFixed(1)}%</span>
+                            </div>
+                            <div className="w-full h-1 bg-black/6 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-[var(--kaiko-primary)] rounded-full"
+                                style={{ width: `${Math.min(ratingWinProb * 2, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 現在人気 */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-[var(--kaiko-text-muted)]">現在人気</span>
+                          <span className={`text-[14px] font-black leading-none px-2 py-0.5 rounded-xl ${
+                            vbDetail.oddsRank <= 3
+                              ? "bg-[var(--kaiko-primary)] text-[#131313]"
+                              : vbDetail.oddsRank <= 6
+                              ? "bg-black/8 text-[#131313]"
+                              : "bg-black/5 text-[var(--kaiko-text-muted)]"
+                          }`}>{vbDetail.oddsRank}番人気</span>
+                        </div>
+
+                        {/* 分析走数（小さめ補足） */}
+                        <p className="text-[10px] text-[var(--kaiko-text-muted)]">分析走数: {vbDetail.racesAnalyzed}走</p>
+                      </div>
+                    );
+                  })()}
 
                   {/* 近走成績 */}
                   {entry.recentPerfs.length > 0 && (
