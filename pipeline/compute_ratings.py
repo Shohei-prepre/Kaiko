@@ -66,7 +66,7 @@ MIN_RACES         = 1      # horse_ratings に登録する最小走数
 FETCH_PAGE_SIZE   = 1000   # Supabase 取得のページサイズ（デフォルト上限に合わせる）
 UPSERT_BATCH_SIZE = 500    # upsert のバッチサイズ
 CORRECTION_CAP    = 3.0    # trouble_value の上限（馬身）
-RATING_DAMP       = 0.05   # L2正則化係数。証拠の薄い馬のratingを0に引き戻す
+RATING_DAMP       = 0.01   # L2正則化係数。証拠の薄い馬のratingを0に引き戻す
 
 # 施策1：補正ペナルティ閾値
 # この補正量（馬身）でペナルティが50%になる。小さいほど補正への懐疑が強い
@@ -231,7 +231,7 @@ def build_pairs(
 # ── 最小二乗求解 ──────────────────────────────────────────────────────────────
 
 IRLS_ITERATIONS  = 5      # IRLSの反復回数
-IRLS_HUBER_DELTA = 2.0   # Huber閾値（馬身）。これより大きい残差を外れ値として下げる
+IRLS_HUBER_DELTA = 5.0   # Huber閾値（馬身）。これより大きい残差を外れ値として下げる
 
 def solve_ratings(
     pairs: list[tuple[int, int, float, float]],
