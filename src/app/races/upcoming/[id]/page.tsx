@@ -351,16 +351,6 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
   // 脚質分布からペースパターンを計算
   const paceResult = calcPacePattern(runningStyleMap);
 
-  // 展開予想タブ用の馬ごと脚質リスト（馬番順）
-  const runningStyleEntries = resolvedEntries
-    .slice()
-    .sort((a, b) => (a.horse_number ?? 99) - (b.horse_number ?? 99))
-    .map((e) => ({
-      horseName:   e.horse_name,
-      horseNumber: e.horse_number ?? 0,
-      runningStyle: e.horse_id ? (runningStyleMap.get(e.horse_id) ?? null) : null,
-    }));
-
   const runningStyleArr = Array.from(runningStyleMap.entries());
   const abilityRankArr = Array.from(abilityRankMap.entries());
   const ratingArr: [number, number][] = [...ratingByHorseId.entries()].map(([hid, r]) => [hid, r.rating]);
@@ -439,7 +429,6 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
           courseChar={courseChar}
           trackBiasLevel={race.track_bias_level}
           trackBiasSummary={race.track_bias_summary}
-          runningStyleEntries={runningStyleEntries}
           entryCount={entriesWithForm.length}
         />
 

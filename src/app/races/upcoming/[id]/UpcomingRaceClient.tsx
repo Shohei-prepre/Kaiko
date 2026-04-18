@@ -13,13 +13,13 @@ export const PICK_SYMBOLS: PickSymbol[] = ["◎", "○", "▲", "△"];
 // ── 調整パラメータ（チューニング用定数） ─────────────────────────────────────
 
 /** 展開有利/不利で加減するレーティング点数（≈馬身数） */
-const PACE_ADJUSTMENT = 2.0;
+const PACE_ADJUSTMENT = 0.8;
 
 /** バイアス強度別の補正量（◎=強い偏り〜×=なし） */
 const BIAS_MAGNITUDE: Record<string, number> = {
-  "◎": 1.5,
-  "○": 1.0,
-  "△": 0.5,
+  "◎": 0.6,
+  "○": 0.4,
+  "△": 0.2,
   "×": 0.0,
 };
 
@@ -74,12 +74,6 @@ function calcAdjustedScore(
 
 // ── 型定義 ────────────────────────────────────────────────────────────────────
 
-interface RunningStyleEntry {
-  horseName:    string;
-  horseNumber:  number;
-  runningStyle: string | null;
-}
-
 interface Props {
   track:    string;
   surface:  string;
@@ -92,7 +86,6 @@ interface Props {
   courseChar:          CourseCharacteristic | null;
   trackBiasLevel:      string | null;
   trackBiasSummary:    string | null;
-  runningStyleEntries: RunningStyleEntry[];
   entryCount:          number;
 }
 
@@ -108,7 +101,6 @@ export default function UpcomingRaceClient({
   courseChar,
   trackBiasLevel,
   trackBiasSummary,
-  runningStyleEntries,
   entryCount,
 }: Props) {
   // 展開選択（推奨パターンをデフォルト）
@@ -192,7 +184,6 @@ export default function UpcomingRaceClient({
         trackBiasSummary={trackBiasSummary}
         pacePattern={paceResult.pattern}
         paceSummary={paceResult.summary}
-        runningStyleEntries={runningStyleEntries}
         selectedPace={selectedPace}
         onPaceChange={setSelectedPace}
       />

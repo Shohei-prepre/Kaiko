@@ -2,12 +2,6 @@
 
 import type { CourseCharacteristic } from "@/lib/courseCharacteristics";
 
-interface RunningStyleEntry {
-  horseName:    string;
-  horseNumber:  number;
-  runningStyle: string | null;
-}
-
 type PaceTab = "前残り" | "差し有利" | "フラット";
 
 interface Props {
@@ -19,7 +13,6 @@ interface Props {
   trackBiasSummary:    string | null;
   pacePattern:         PaceTab;
   paceSummary:         string;
-  runningStyleEntries: RunningStyleEntry[];
   /** 親コンポーネントが保持する選択中のペースタブ */
   selectedPace:        PaceTab;
   /** タブ切替ハンドラ（親のstateを更新する） */
@@ -39,26 +32,6 @@ function biasLevelStyle(level: string | null): { label: string; textCls: string;
   }
 }
 
-/**
- * タブ別の有利・不利脚質を返す
- */
-function getFavorableStyles(tab: PaceTab): { favor: string[]; unfavor: string[] } {
-  switch (tab) {
-    case "前残り":   return { favor: ["逃げ", "先行"], unfavor: ["差し", "追い込み"] };
-    case "差し有利": return { favor: ["差し", "追い込み"], unfavor: ["逃げ", "先行"] };
-    case "フラット": return { favor: [], unfavor: [] };
-  }
-}
-
-/**
- * 展開予想の脚質カラー
- */
-const RUNNING_STYLE_COLOR: Record<string, string> = {
-  "逃げ":     "text-[var(--kaiko-tag-red-text)]",
-  "先行":     "text-[var(--kaiko-tag-gold-text)]",
-  "差し":     "text-[var(--kaiko-tag-blue-text)]",
-  "追い込み": "text-[var(--kaiko-tag-green-text)]",
-};
 
 /**
  * レース分析セクション
@@ -73,17 +46,10 @@ export default function RaceAnalysisSection({
   trackBiasSummary,
   pacePattern,
   paceSummary,
-  runningStyleEntries,
   selectedPace,
   onPaceChange,
 }: Props) {
   const TABS: PaceTab[] = ["前残り", "差し有利", "フラット"];
-  const { favor, unfavor } = getFavorableStyles(selectedPace);
-
-  const favorEntries  = runningStyleEntries.filter((e) => e.runningStyle && favor.includes(e.runningStyle));
-  const unfavorEntries = runningStyleEntries.filter((e) => e.runningStyle && unfavor.includes(e.runningStyle));
-  const neutralEntries = runningStyleEntries.filter((e) => !e.runningStyle);
-  const flatEntries   = runningStyleEntries; // フラットタブ用
 
   const biasStyle = biasLevelStyle(trackBiasLevel);
 
@@ -167,95 +133,9 @@ export default function RaceAnalysisSection({
           ))}
         </div>
 
-        {/* タブコンテンツ */}
-        <div className="px-4 py-3 space-y-3">
-          {selectedPace === "フラット" ? (
-            /* フラット: 全馬並列表示 */
-            <div>
-              <p className="text-[10px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider mb-2">出走馬（脚質別）</p>
-              <div className="space-y-1">
-                {flatEntries.map((e) => (
-                  <div key={e.horseNumber} className="flex items-center gap-2 text-[12px]">
-                    <span className="font-black text-[var(--kaiko-text-muted)] w-5 text-right shrink-0">{e.horseNumber}番</span>
-                    <span className="font-bold text-[#131313] flex-1 truncate">{e.horseName}</span>
-                    {e.runningStyle && (
-                      <span className={`text-[11px] font-bold shrink-0 ${RUNNING_STYLE_COLOR[e.runningStyle] ?? "text-[var(--kaiko-text-muted)]"}`}>
-                        {e.runningStyle}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* 有利馬 */}
-              {favorEntries.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <span className="text-[10px] font-black text-[var(--kaiko-tag-green-text)] uppercase tracking-wider">▲ 有利</span>
-                    <span className="text-[10px] text-[var(--kaiko-text-muted)]">
-                      {selectedPace === "前残り" ? "逃げ・先行" : "差し・追い込み"}
-                    </span>
-                  </div>
-                  <div className="space-y-1">
-                    {favorEntries.map((e) => (
-                      <div key={e.horseNumber} className="flex items-center gap-2 text-[12px]">
-                        <span className="font-black text-[var(--kaiko-text-muted)] w-5 text-right shrink-0">{e.horseNumber}番</span>
-                        <span className="font-bold text-[#131313] flex-1 truncate">{e.horseName}</span>
-                        <span className={`text-[11px] font-bold shrink-0 ${RUNNING_STYLE_COLOR[e.runningStyle!] ?? "text-[var(--kaiko-text-muted)]"}`}>
-                          {e.runningStyle}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 不利馬 */}
-              {unfavorEntries.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <span className="text-[10px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider">▽ 不利</span>
-                    <span className="text-[10px] text-[var(--kaiko-text-muted)]">
-                      {selectedPace === "前残り" ? "差し・追い込み" : "逃げ・先行"}
-                    </span>
-                  </div>
-                  <div className="space-y-1 opacity-60">
-                    {unfavorEntries.map((e) => (
-                      <div key={e.horseNumber} className="flex items-center gap-2 text-[12px]">
-                        <span className="font-black text-[var(--kaiko-text-muted)] w-5 text-right shrink-0">{e.horseNumber}番</span>
-                        <span className="font-bold text-[var(--kaiko-text-muted)] flex-1 truncate">{e.horseName}</span>
-                        <span className={`text-[11px] font-bold shrink-0 ${RUNNING_STYLE_COLOR[e.runningStyle!] ?? "text-[var(--kaiko-text-muted)]"}`}>
-                          {e.runningStyle}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 脚質不明馬 */}
-              {neutralEntries.length > 0 && (
-                <div>
-                  <p className="text-[10px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider mb-1.5">脚質不明</p>
-                  <div className="space-y-1 opacity-50">
-                    {neutralEntries.map((e) => (
-                      <div key={e.horseNumber} className="flex items-center gap-2 text-[12px]">
-                        <span className="font-black text-[var(--kaiko-text-muted)] w-5 text-right shrink-0">{e.horseNumber}番</span>
-                        <span className="font-bold text-[var(--kaiko-text-muted)] flex-1 truncate">{e.horseName}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* 説明テキスト */}
-          <div className="pt-2 border-t border-black/6">
-            <p className="text-[11px] text-[var(--kaiko-text-muted)] leading-snug">{paceSummary}</p>
-          </div>
+        {/* タブコンテンツ：説明テキストのみ */}
+        <div className="px-4 py-3">
+          <p className="text-[11px] text-[var(--kaiko-text-muted)] leading-snug">{paceSummary}</p>
         </div>
       </section>
     </>
