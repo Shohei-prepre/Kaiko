@@ -242,7 +242,7 @@ export default function UpcomingRaceClient({
                       color,
                       borderColor: isSelected ? color : "#e5e7eb",
                       background: isSelected ? `color-mix(in srgb, ${color} 15%, white)` : "white",
-                      ringColor: color,
+                      ["--tw-ring-color" as string]: color,
                     }}
                   >
                     {sym}
