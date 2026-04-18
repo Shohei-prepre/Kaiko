@@ -56,6 +56,18 @@ MIN_WEIGHT        = 0.02   # これ未満のウェイトはスキップ（古す
 MIN_RACES         = 1      # horse_ratings に登録する最小走数
 FETCH_PAGE_SIZE   = 1000   # Supabase 取得のページサイズ（デフォルト上限に合わせる）
 UPSERT_BATCH_SIZE = 500    # upsert のバッチサイズ
+CORRECTION_CAP    = 3.0    # trouble_value の上限（馬身）
+RATING_DAMP       = 0.05   # L2正則化係数。証拠の薄い馬のratingを0に引き戻す
+
+# trouble以外の補正係数（1.0=そのまま、0.5=半分に緩める）
+# ペース・馬場・気性・体重は主観評価のブレが大きいため緩めに設定
+CORRECTION_SCALE: dict[str, float] = {
+    "trouble_value":        1.0,  # 出遅れ・不利：そのまま
+    "temperament_value":    0.5,  # 気性・折り合い：半分
+    "weight_effect_value":  0.5,  # 体重増減：半分
+    "track_condition_value":0.5,  # 馬場適性：半分
+    "pace_effect_value":    0.5,  # ペース影響：半分
+}
 
 # ── 時間減衰 ──────────────────────────────────────────────────────────────────
 
@@ -77,8 +89,14 @@ def has_llm(perf: dict) -> bool:
 
 
 def correction_sum(perf: dict) -> float:
-    """5補正項目の合計（null は 0 扱い）"""
-    return sum(perf.get(k) or 0.0 for k in CORRECTION_KEYS)
+    """5補正項目の合計。trouble はキャップあり、他は CORRECTION_SCALE で緩める"""
+    trouble = perf.get("trouble_value") or 0.0
+    trouble = max(-CORRECTION_CAP, min(CORRECTION_CAP, trouble))
+    others = sum(
+        (perf.get(k) or 0.0) * CORRECTION_SCALE[k]
+        for k in CORRECTION_KEYS if k != "trouble_value"
+    )
+    return trouble + others
 
 
 # ── 累積着差マップ構築 ────────────────────────────────────────────────────────
@@ -177,11 +195,15 @@ def build_pairs(
 
 # ── 最小二乗求解 ──────────────────────────────────────────────────────────────
 
+IRLS_ITERATIONS  = 5      # IRLSの反復回数
+IRLS_HUBER_DELTA = 2.0   # Huber閾値（馬身）。これより大きい残差を外れ値として下げる
+
 def solve_ratings(
     pairs: list[tuple[int, int, float, float]],
 ) -> dict[int, float]:
     """
-    重み付き最小二乗でグローバルレーティングを算出する。
+    IRLS（反復重み付き最小二乗法）でグローバルレーティングを算出する。
+    外れ値ペア（予測と実態が大きくかけ離れているペア）を自動的に downweight する。
     アンカー：全馬の平均 = 0。
     Returns: {horse_id: rating}
     """
@@ -192,22 +214,42 @@ def solve_ratings(
 
     print(f"  行列サイズ: {m} ペア × {n} 馬")
 
-    A = lil_matrix((m + 1, n), dtype=float)
-    b = np.zeros(m + 1, dtype=float)
+    # 初期ロバスト重み（全1.0）
+    robust_w = np.ones(m, dtype=float)
 
-    for k, (ha, hb, diff, w) in enumerate(pairs):
-        A[k, idx[ha]] =  w
-        A[k, idx[hb]] = -w
-        b[k]           = diff * w
+    ratings = np.zeros(n, dtype=float)
 
-    # アンカー制約：全馬の平均 = 0
-    A[m, :] = 1.0
-    b[m]    = 0.0
+    for irls_iter in range(IRLS_ITERATIONS):
+        A = lil_matrix((m + 1, n), dtype=float)
+        b = np.zeros(m + 1, dtype=float)
 
-    print("  lsqr で求解中...")
-    result  = lsqr(A.tocsr(), b, iter_lim=3000, atol=1e-6, btol=1e-6)
-    ratings = result[0]
-    print(f"  反復: {result[2]}回  残差ノルム: {result[3]:.4f}")
+        for k, (ha, hb, diff, w) in enumerate(pairs):
+            ew = w * robust_w[k]   # 元の重み × ロバスト重み
+            A[k, idx[ha]] =  ew
+            A[k, idx[hb]] = -ew
+            b[k]           = diff * ew
+
+        # アンカー制約：全馬の平均 = 0
+        A[m, :] = 1.0
+        b[m]    = 0.0
+
+        result  = lsqr(A.tocsr(), b, damp=RATING_DAMP, iter_lim=3000, atol=1e-6, btol=1e-6)
+        ratings = result[0]
+
+        # 残差を計算してロバスト重みを更新（Huber重み）
+        residuals = np.array([
+            ratings[idx[ha]] - ratings[idx[hb]] - diff
+            for ha, hb, diff, _ in pairs
+        ])
+        abs_res = np.abs(residuals)
+        robust_w = np.where(
+            abs_res <= IRLS_HUBER_DELTA,
+            1.0,
+            IRLS_HUBER_DELTA / np.maximum(abs_res, 1e-8)
+        )
+
+        outliers = int(np.sum(abs_res > IRLS_HUBER_DELTA))
+        print(f"  IRLS {irls_iter + 1}/{IRLS_ITERATIONS}: 残差ノルム={result[3]:.4f}  外れ値ペア={outliers}件")
 
     return {h: float(ratings[idx[h]]) for h in horses}
 
