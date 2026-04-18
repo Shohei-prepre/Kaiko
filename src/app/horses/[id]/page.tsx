@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import type { Horse, HorsePerformance, Race } from "@/lib/database.types";
+import type { Horse, HorsePerformance, Race, HorseRating } from "@/lib/database.types";
 import BottomNav from "@/components/BottomNav";
 import BackButton from "@/components/BackButton";
 import HorseHistory from "./HorseHistory";
@@ -16,6 +16,15 @@ interface PerformanceWithRace extends HorsePerformance {
 
 interface HorseWithPerformances extends Horse {
   horse_performances: PerformanceWithRace[];
+}
+
+async function getHorseRating(id: string): Promise<HorseRating | null> {
+  const { data } = await supabase
+    .from("horse_ratings")
+    .select("*")
+    .eq("horse_id", id)
+    .single();
+  return data as HorseRating | null;
 }
 
 async function getHorse(id: string): Promise<HorseWithPerformances | null> {
@@ -43,7 +52,7 @@ async function getHorse(id: string): Promise<HorseWithPerformances | null> {
 
 export default async function HorsePage({ params }: Props) {
   const { id } = await params;
-  const horse = await getHorse(id);
+  const [horse, rating] = await Promise.all([getHorse(id), getHorseRating(id)]);
   if (!horse) notFound();
 
   const perfs = horse.horse_performances;
@@ -85,6 +94,13 @@ export default async function HorsePage({ params }: Props) {
                 <span className="text-[10px] text-[var(--kaiko-text-muted)] font-bold tracking-widest block">出走数</span>
                 <span className="font-bold text-[#131313]">{perfs.length}戦</span>
               </div>
+              {rating && (
+                <div>
+                  <span className="text-[10px] text-[var(--kaiko-text-muted)] font-bold tracking-widest block">能力レーティング</span>
+                  <span className="font-bold text-[#131313]">{rating.rating > 0 ? "+" : ""}{rating.rating.toFixed(2)}</span>
+                  <span className="text-[10px] text-[var(--kaiko-text-muted)] ml-1">({rating.races_analyzed}走)</span>
+                </div>
+              )}
             </div>
           </div>
         </section>

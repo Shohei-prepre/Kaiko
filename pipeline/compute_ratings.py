@@ -54,7 +54,7 @@ TIME_DECAY_BASE   = 0.75   # 1年で 0.75 倍
 LLM_ABSENT_WEIGHT = 0.5    # LLM補正なしのペアの追加重み
 MIN_WEIGHT        = 0.02   # これ未満のウェイトはスキップ（古すぎるデータ）
 MIN_RACES         = 2      # horse_ratings に登録する最小走数
-FETCH_PAGE_SIZE   = 10000  # Supabase 取得のページサイズ
+FETCH_PAGE_SIZE   = 1000   # Supabase 取得のページサイズ（デフォルト上限に合わせる）
 UPSERT_BATCH_SIZE = 500    # upsert のバッチサイズ
 
 # ── 時間減衰 ──────────────────────────────────────────────────────────────────
