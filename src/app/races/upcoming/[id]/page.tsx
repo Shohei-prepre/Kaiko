@@ -16,6 +16,7 @@ import BottomNav from "@/components/BottomNav";
 import BackButton from "@/components/BackButton";
 import EntryList from "./EntryList";
 import RaceNavBar from "./RaceNavBar";
+import RaceAnalysisSection from "./RaceAnalysisSection";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -207,6 +208,44 @@ async function getRecentPerfsForHorses(
   return { perfsMap, runningStyleMap };
 }
 
+/**
+ * 出走馬の脚質分布からペースパターンを推定する（ルールベース）
+ * - 逃げ2頭以上 or 逃げ1+先行多 → ハイペース → 差し有利
+ * - 逃げ1頭 + 先行少 → スロー → 前残り
+ * - 逃げ0頭 → 展開読みにくい → フラット
+ */
+function calcPacePattern(runningStyleMap: Map<number, string>): {
+  pattern: "前残り" | "差し有利" | "フラット";
+  summary: string;
+} {
+  const styles = [...runningStyleMap.values()];
+  const escape = styles.filter((s) => s === "逃げ").length;
+  const lead   = styles.filter((s) => s === "先行").length;
+
+  if (escape >= 2) {
+    return {
+      pattern: "差し有利",
+      summary: `逃げ馬が${escape}頭いるためハイペースが予想され、差し・追い込み有利。`,
+    };
+  }
+  if (escape === 1 && lead <= 3) {
+    return {
+      pattern: "前残り",
+      summary: `逃げ馬1頭で先行馬も少なく、スローペースから前残りが有力。`,
+    };
+  }
+  if (escape === 0) {
+    return {
+      pattern: "フラット",
+      summary: `逃げ宣言馬が不在。ペース読みにくく展開は流動的。`,
+    };
+  }
+  return {
+    pattern: "差し有利",
+    summary: `逃げ1頭に先行馬が${lead}頭集まりハイペース想定。差し・追い込みに展開利。`,
+  };
+}
+
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr);
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
@@ -318,6 +357,19 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
   const surfaceBadge = SURFACE_BADGE[race.surface] ?? SURFACE_BADGE["芝"];
   const courseChar = getCourseCharacteristic(race.track, race.surface, race.distance);
 
+  // 脚質分布からペースパターンを計算
+  const paceResult = calcPacePattern(runningStyleMap);
+
+  // 展開予想タブ用の馬ごと脚質リスト（馬番順）
+  const runningStyleEntries = resolvedEntries
+    .slice()
+    .sort((a, b) => (a.horse_number ?? 99) - (b.horse_number ?? 99))
+    .map((e) => ({
+      horseName:   e.horse_name,
+      horseNumber: e.horse_number ?? 0,
+      runningStyle: e.horse_id ? (runningStyleMap.get(e.horse_id) ?? null) : null,
+    }));
+
   const valueBetArr = Array.from(valueBetMap.entries());
   const picksArr = Array.from(picksMap.entries());
   const runningStyleArr = Array.from(runningStyleMap.entries());
@@ -385,31 +437,18 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
           </div>
         </section>
 
-        {/* コース特性カード */}
-        {courseChar && (
-          <section className="bg-white rounded-2xl overflow-hidden border border-black/8">
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-black/4 border-b border-black/8">
-              <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-[16px]">map</span>
-              <span className="text-[10px] font-black text-[#131313] uppercase tracking-wider">
-                コース特性 — {race.track} {race.surface}{race.distance}m
-              </span>
-            </div>
-            <div className="divide-y divide-black/6">
-              <div className="px-4 py-2.5">
-                <span className="block text-[9px] font-black text-[var(--kaiko-primary)] uppercase tracking-wider mb-0.5">脚質傾向</span>
-                <span className="text-[12px] font-bold text-[#131313] leading-snug line-clamp-2">{courseChar.runningStyle}</span>
-              </div>
-              <div className="px-4 py-2.5">
-                <span className="block text-[9px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider mb-0.5">枠順傾向</span>
-                <span className="text-[12px] font-bold text-[#131313] leading-snug line-clamp-2">{courseChar.postBias}</span>
-              </div>
-              <div className="px-4 py-2.5">
-                <span className="block text-[9px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider mb-0.5">特記</span>
-                <span className="text-[12px] font-bold text-[#131313] leading-snug line-clamp-2">{courseChar.notes}</span>
-              </div>
-            </div>
-          </section>
-        )}
+        {/* コース特性 + トラックバイアス予想 + 展開予想 */}
+        <RaceAnalysisSection
+          track={race.track}
+          surface={race.surface}
+          distance={race.distance}
+          courseChar={courseChar}
+          trackBiasLevel={race.track_bias_level}
+          trackBiasSummary={race.track_bias_summary}
+          pacePattern={paceResult.pattern}
+          paceSummary={paceResult.summary}
+          runningStyleEntries={runningStyleEntries}
+        />
 
         {/* 出走馬リスト */}
         <div className="flex items-center gap-2 px-1 pt-1">

@@ -111,6 +111,8 @@ export interface UpcomingRace {
   race_number: number | null;
   head_count: number | null;
   odds_updated_at: string | null;
+  track_bias_level:   string | null;  // "◎"|"○"|"△"|"×"
+  track_bias_summary: string | null;  // X投稿から生成したバイアス説明（60字以内）
 }
 
 export interface UpcomingEntry {
