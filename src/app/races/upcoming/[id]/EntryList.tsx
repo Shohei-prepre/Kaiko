@@ -146,7 +146,6 @@ interface Props {
 
 export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, picksMap: picksArr, runningStyleMap: runningStyleArr, abilityRankMap: abilityRankArr, ratingMap: ratingArr }: Props) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [showWinProbTooltipId, setShowWinProbTooltipId] = useState<number | null>(null);
 
   const valueBetMap = new Map<number, ValueBetDetail>(valueBetArr);
   const picksMap = new Map<number, HorsePick>(picksArr);
@@ -234,8 +233,8 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
           const runningStyle = runningStyleMap.get(entry.horse_id);
           const runningColor = runningStyle ? RUNNING_STYLE_COLOR[runningStyle] : null;
           const abilityRank = abilityRankMap.get(entry.horse_id);
-          // pickがある場合のみ展開可能
-          const isExpandable = !!pick;
+          // pickがある、またはabilityRankがある場合に展開可能
+          const isExpandable = !!pick || abilityRank !== undefined;
 
           // 人気カラー（丸なし）
           const popularityColor = entry.popularity !== null
@@ -367,67 +366,47 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
                 </div>
               </button>
 
-              {/* 展開パネル（pickがある場合のみ） */}
-              {isExpanded && pick && pickStyle && (
+              {/* 展開パネル（pickまたはabilityRankがある場合） */}
+              {isExpanded && (pick || abilityRank !== undefined) && (
                 <div className="mx-3 mb-3 rounded-xl border bg-black/5 border-white/12 p-3 space-y-2.5">
 
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[22px] font-black leading-none ${pickStyle.text} ${pickStyle.weight}`}>
-                      {pick.symbol}
-                    </span>
-                    <div>
-                      <span className={`text-[13px] font-black ${pickStyle.text}`}>{pickStyle.label}</span>
-                      <p className="text-[11px] text-[var(--kaiko-text-muted)]">{pickStyle.desc}</p>
-                    </div>
-                    <div className="ml-auto text-right">
-                      <span className="text-[11px] text-[var(--kaiko-text-muted)] block">EV（回収率目安）</span>
-                      <span className={`text-[18px] font-black leading-none ${
-                        pick.ev >= 1.0 ? "text-[var(--kaiko-tag-green-text)]" : "text-[var(--kaiko-text-muted)]"
-                      }`}>
-                        {pick.ev.toFixed(2)}
+                  {/* 印ヘッダー（pickがある場合のみ） */}
+                  {pick && pickStyle && (
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[22px] font-black leading-none ${pickStyle.text} ${pickStyle.weight}`}>
+                        {pick.symbol}
                       </span>
-                      <span className="text-[10px] text-[var(--kaiko-text-muted)] block">{pick.ev >= 1.0 ? "▲ 理論プラス" : "▼ 理論マイナス"}</span>
-                    </div>
-                  </div>
-
-                  {/* 推定勝率 */}
-                  <div className="bg-black/5 rounded-xl p-2.5">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] font-bold text-[var(--kaiko-text-muted)] uppercase tracking-wider">推定勝率</span>
-                        <button
-                          type="button"
-                          className="w-[15px] h-[15px] rounded-full bg-black/8 flex items-center justify-center text-[9px] font-black text-[var(--kaiko-text-muted)] shrink-0 active:bg-white/25"
-                          onClick={(e) => { e.stopPropagation(); setShowWinProbTooltipId(showWinProbTooltipId === entry.id ? null : entry.id); }}
-                        >
-                          ?
-                        </button>
+                      <div>
+                        <span className={`text-[13px] font-black ${pickStyle.text}`}>{pickStyle.label}</span>
+                        <p className="text-[11px] text-[var(--kaiko-text-muted)]">{pickStyle.desc}</p>
                       </div>
-                      <span className="text-[15px] font-black text-[#131313]">
-                        {pick.winProb.toFixed(1)}%
-                      </span>
+                      <div className="ml-auto text-right">
+                        <span className="text-[11px] text-[var(--kaiko-text-muted)] block">EV（回収率目安）</span>
+                        <span className={`text-[18px] font-black leading-none ${
+                          pick.ev >= 1.0 ? "text-[var(--kaiko-tag-green-text)]" : "text-[var(--kaiko-text-muted)]"
+                        }`}>
+                          {pick.ev.toFixed(2)}
+                        </span>
+                        <span className="text-[10px] text-[var(--kaiko-text-muted)] block">{pick.ev >= 1.0 ? "▲ 理論プラス" : "▼ 理論マイナス"}</span>
+                      </div>
                     </div>
-                    {showWinProbTooltipId === entry.id && (
-                      <p className="text-[10px] text-[var(--kaiko-text-muted)] mb-1.5 leading-snug bg-black/4 rounded-xl px-2.5 py-1.5">
-                        データあり馬全体を全頭数で補正した理論確率
-                      </p>
-                    )}
-                    <div className="w-full h-1.5 bg-black/6 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-[var(--kaiko-primary)] rounded-full transition-all"
-                        style={{ width: `${Math.min(pick.winProb, 100)}%` }}
-                      />
-                    </div>
-                  </div>
+                  )}
 
-                  {/* 能力推定ランク（vbDetailがある場合のみ） */}
-                  {vbDetail && (() => {
+                  {/* 能力推定ランク（abilityRankがある全馬に表示） */}
+                  {(() => {
+                    // vbDetailがあればそちらを優先、なければabilityRankMapとentryのデータで代替
+                    const effectiveRank = vbDetail?.abilityRank ?? abilityRank;
+                    if (effectiveRank === undefined) return null;
+
+                    const effectiveRacesAnalyzed = vbDetail?.racesAnalyzed ?? entry.recentPerfs.length;
+                    const effectiveOddsRank = vbDetail?.oddsRank ?? entry.popularity ?? 0;
+
                     const ratingWinProb = entry.horse_id != null
                       ? computeSoftmaxProb(entry.horse_id, ratingMap)
                       : null;
                     const explanation = generateAbilityExplanation(
-                      vbDetail.abilityRank,
-                      vbDetail.racesAnalyzed,
+                      effectiveRank,
+                      effectiveRacesAnalyzed,
                       entry.recentPerfs
                     );
                     return (
@@ -436,11 +415,11 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
                         <div className="flex items-center justify-between">
                           <span className="text-[11px] text-[var(--kaiko-text-muted)]">能力推定ランク</span>
                           <div className="flex items-center gap-1.5">
-                            {vbDetail.abilityRank <= 3 && (
+                            {effectiveRank <= 3 && (
                               <span
                                 className={`material-symbols-outlined text-[18px] ${
-                                  vbDetail.abilityRank === 1 ? "text-[var(--kaiko-primary)]" :
-                                  vbDetail.abilityRank === 2 ? "text-slate-500" :
+                                  effectiveRank === 1 ? "text-[var(--kaiko-primary)]" :
+                                  effectiveRank === 2 ? "text-slate-500" :
                                   "text-amber-600"
                                 }`}
                                 style={{ fontVariationSettings: "'FILL' 1" }}
@@ -449,11 +428,11 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
                               </span>
                             )}
                             <span className={`text-[16px] font-black leading-none ${
-                              vbDetail.abilityRank === 1 ? "text-[var(--kaiko-primary)]" :
-                              vbDetail.abilityRank === 2 ? "text-slate-500" :
-                              vbDetail.abilityRank === 3 ? "text-amber-600" :
+                              effectiveRank === 1 ? "text-[var(--kaiko-primary)]" :
+                              effectiveRank === 2 ? "text-slate-500" :
+                              effectiveRank === 3 ? "text-amber-600" :
                               "text-[var(--kaiko-text-muted)]"
-                            }`}>{vbDetail.abilityRank}位</span>
+                            }`}>{effectiveRank}位</span>
                           </div>
                         </div>
 
@@ -481,19 +460,21 @@ export default function EntryList({ entriesWithForm, valueBetMap: valueBetArr, p
                         )}
 
                         {/* 現在人気 */}
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] text-[var(--kaiko-text-muted)]">現在人気</span>
-                          <span className={`text-[14px] font-black leading-none px-2 py-0.5 rounded-xl ${
-                            vbDetail.oddsRank <= 3
-                              ? "bg-[var(--kaiko-primary)] text-[#131313]"
-                              : vbDetail.oddsRank <= 6
-                              ? "bg-black/8 text-[#131313]"
-                              : "bg-black/5 text-[var(--kaiko-text-muted)]"
-                          }`}>{vbDetail.oddsRank}番人気</span>
-                        </div>
+                        {effectiveOddsRank > 0 && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] text-[var(--kaiko-text-muted)]">現在人気</span>
+                            <span className={`text-[14px] font-black leading-none px-2 py-0.5 rounded-xl ${
+                              effectiveOddsRank <= 3
+                                ? "bg-[var(--kaiko-primary)] text-[#131313]"
+                                : effectiveOddsRank <= 6
+                                ? "bg-black/8 text-[#131313]"
+                                : "bg-black/5 text-[var(--kaiko-text-muted)]"
+                            }`}>{effectiveOddsRank}番人気</span>
+                          </div>
+                        )}
 
                         {/* 分析走数（小さめ補足） */}
-                        <p className="text-[10px] text-[var(--kaiko-text-muted)]">分析走数: {vbDetail.racesAnalyzed}走</p>
+                        <p className="text-[10px] text-[var(--kaiko-text-muted)]">分析走数: {effectiveRacesAnalyzed}走</p>
                       </div>
                     );
                   })()}
