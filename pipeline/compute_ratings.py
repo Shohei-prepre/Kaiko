@@ -60,7 +60,7 @@ CORRECTION_KEYS = [
 ]
 
 TIME_DECAY_BASE   = 0.75   # 1年で 0.75 倍
-LLM_ABSENT_WEIGHT = 0.5    # LLM補正なしのペアの追加重み
+LLM_ABSENT_WEIGHT = 1.0    # LLM補正なしでも同じ重みで扱う
 MIN_WEIGHT        = 0.02   # これ未満のウェイトはスキップ（古すぎるデータ）
 MIN_RACES         = 1      # horse_ratings に登録する最小走数
 FETCH_PAGE_SIZE   = 1000   # Supabase 取得のページサイズ（デフォルト上限に合わせる）
@@ -106,14 +106,16 @@ def has_llm(perf: dict) -> bool:
 
 
 def correction_sum(perf: dict) -> float:
-    """5補正項目の合計。trouble はキャップあり、他は CORRECTION_SCALE で緩める"""
+    """5補正項目の合計。trouble はキャップあり、他は CORRECTION_SCALE で緩める。
+    合計がマイナス（条件が向いた方向）は無視する。
+    プラス方向（不利・ロスの説明）のみを能力推定に使う。"""
     trouble = perf.get("trouble_value") or 0.0
     trouble = max(-CORRECTION_CAP, min(CORRECTION_CAP, trouble))
     others = sum(
         (perf.get(k) or 0.0) * CORRECTION_SCALE[k]
         for k in CORRECTION_KEYS if k != "trouble_value"
     )
-    return trouble + others
+    return max(0.0, trouble + others)
 
 
 # ── 累積着差マップ構築 ────────────────────────────────────────────────────────
