@@ -1,22 +1,22 @@
 """
-generate_race_analysis.py — レース分析データ生成スクリプト
+generate_race_analysis.py — レース分析データ生成スクリプト（Gemini版）
 
 upcoming_races テーブルの各レースについて:
-1. Twitter API v2 でX投稿を検索（馬場・バイアス関連）
-2. 取得した投稿をClaude APIに渡してバイアス情報を要約
-3. track_bias_level / track_bias_summary を upcoming_races に upsert
+1. Gemini（Google Search grounding）で当日の馬場・バイアス情報を検索＆分析
+2. track_bias_level / track_bias_summary を upcoming_races に upsert
+
+Twitter APIは不要。Gemini が Google Search を使ってX投稿や競馬サイトを検索する。
 
 使い方:
   cd pipeline
-  pip install anthropic tweepy
+  pip install google-genai
   python generate_race_analysis.py           # 未分析のみ（track_bias_summary IS NULL）
   python generate_race_analysis.py --force   # 全レース上書き
 
 必要な環境変数（.env）:
   SUPABASE_URL
   SUPABASE_SERVICE_KEY
-  ANTHROPIC_API_KEY
-  TWITTER_BEARER_TOKEN
+  GEMINI_API_KEY
 """
 
 from __future__ import annotations
@@ -27,8 +27,8 @@ import os
 import sys
 import time
 
-import anthropic
-import tweepy
+from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
@@ -36,134 +36,95 @@ load_dotenv()
 
 SUPABASE_URL         = os.environ.get("SUPABASE_URL", "")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
-ANTHROPIC_API_KEY    = os.environ.get("ANTHROPIC_API_KEY", "")
-TWITTER_BEARER_TOKEN = os.environ.get("TWITTER_BEARER_TOKEN", "")
+GEMINI_API_KEY       = os.environ.get("GEMINI_API_KEY", "")
 
-# Claude モデル（コスト抑制のため Haiku を使用）
-CLAUDE_MODEL = "claude-haiku-4-5-20251001"
-
-# X検索で取得する最大ツイート数
-MAX_TWEETS = 10
-
-# API呼び出し間のウェイト（レート制限対策）
-TWITTER_WAIT_SEC   = 2.0
-ANTHROPIC_WAIT_SEC = 0.5
+GEMINI_MODEL = "gemini-2.5-flash"
+WAIT_SEC     = 1.5   # レート制限対策
 
 
 def check_env() -> None:
-    """必要な環境変数が揃っているか確認する"""
     missing = []
     if not SUPABASE_URL:         missing.append("SUPABASE_URL")
     if not SUPABASE_SERVICE_KEY: missing.append("SUPABASE_SERVICE_KEY")
-    if not ANTHROPIC_API_KEY:    missing.append("ANTHROPIC_API_KEY")
-    if not TWITTER_BEARER_TOKEN: missing.append("TWITTER_BEARER_TOKEN")
+    if not GEMINI_API_KEY:       missing.append("GEMINI_API_KEY")
     if missing:
         print(f"❌ .env に以下を設定してください: {', '.join(missing)}")
         sys.exit(1)
 
 
 def fetch_upcoming_races(supabase: Client, force: bool) -> list[dict]:
-    """処理対象の upcoming_races を取得する"""
     query = supabase.from_("upcoming_races").select(
         "race_id, race_date, track, surface, distance, track_bias_summary"
     )
     if not force:
-        # NULL のレースのみ対象
         query = query.is_("track_bias_summary", "null")
-
-    resp = query.order("race_date").execute()
-    return resp.data or []
+    return (query.order("race_date").execute().data or [])
 
 
-def search_x_posts(client: tweepy.Client, track: str, race_date: str) -> str:
-    """
-    X（Twitter）でトラックバイアス関連の投稿を検索し、テキストを連結して返す。
-    結果が0件の場合は空文字列を返す。
-    """
-    # 当日・前日を含む検索クエリ
-    query = (
-        f'"{track}競馬場" (馬場 OR バイアス OR 内枠 OR 外枠 OR 馬場状態) '
-        f'lang:ja -is:retweet'
-    )
-
-    try:
-        resp = client.search_recent_tweets(
-            query=query,
-            max_results=MAX_TWEETS,
-            tweet_fields=["created_at", "text"],
-        )
-    except tweepy.TooManyRequests:
-        print("  ⚠ X API レート制限。15分後にリトライしてください。")
-        return ""
-    except Exception as e:
-        print(f"  ⚠ X API エラー: {e}")
-        return ""
-
-    if not resp.data:
-        return ""
-
-    lines = []
-    for tweet in resp.data:
-        lines.append(f"- {tweet.text.strip()}")
-
-    return "\n".join(lines)
-
-
-def analyze_with_claude(
-    ai: anthropic.Anthropic,
+def analyze_with_gemini(
+    client: genai.Client,
     track: str,
     surface: str,
     distance: int,
-    tweets_text: str,
+    race_date: str,
 ) -> dict | None:
     """
-    Claude に X投稿を渡してバイアス情報をJSON形式で生成させる。
-    JSONのパースに失敗した場合は None を返す。
+    Gemini + Google Search grounding で馬場バイアスを検索・分析する。
+    JSON形式で返す。失敗時は None。
     """
-    if not tweets_text:
-        prompt_body = (
-            f"レース: {track}競馬場 {surface}{distance}m\n\n"
-            f"X（Twitter）の投稿が見つかりませんでした。\n"
-            f"投稿情報なしの場合は track_bias_level と track_bias_summary を null にしてください。"
-        )
-    else:
-        prompt_body = (
-            f"以下はX（Twitter）の投稿です。{track}競馬場（{surface}{distance}m）の\n"
-            f"当日の馬場・トラックバイアスについて分析してください。\n\n"
-            f"投稿:\n{tweets_text}\n\n"
-            f"下記JSON形式のみで返答（説明文不要）:\n"
-            f'{{\n'
-            f'  "track_bias_level": "◎",      // ◎強い偏り/○中程度/△弱い/×ほぼなし/null=判断不能\n'
-            f'  "track_bias_summary": "..."   // 60字以内の日本語。情報が少なければ null\n'
-            f'}}'
-        )
+    prompt = (
+        f"{race_date}に開催される{track}競馬場（{surface}{distance}m）の"
+        f"当日の馬場状態・トラックバイアスを調べてください。\n"
+        f"X（旧Twitter）や競馬情報サイトの当日情報を検索し、"
+        f"内外の有利不利や前後の有利不利を把握してください。\n\n"
+        f"以下のJSON形式のみで返答してください（説明文・コードブロック不要）:\n"
+        f'{{\n'
+        f'  "track_bias_level": "◎",\n'
+        f'  "track_bias_summary": "60字以内の日本語"\n'
+        f'}}\n\n'
+        f"track_bias_level の値:\n"
+        f"  ◎ = 強い偏りあり\n"
+        f"  ○ = 中程度の偏り\n"
+        f"  △ = 弱い偏り\n"
+        f"  × = ほぼフラット\n"
+        f"  null = 情報不足で判断不能\n\n"
+        f"情報が少ない場合は両方 null にしてください。"
+    )
 
     try:
-        message = ai.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=256,
-            messages=[{"role": "user", "content": prompt_body}],
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                tools=[types.Tool(google_search=types.GoogleSearch())]
+            ),
         )
-        raw = message.content[0].text.strip()
+        raw = response.text.strip()
 
         # コードブロックがあれば除去
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
+        if "```" in raw:
+            parts = raw.split("```")
+            raw = parts[1] if len(parts) > 1 else raw
             if raw.startswith("json"):
                 raw = raw[4:]
         raw = raw.strip()
 
         return json.loads(raw)
+
     except json.JSONDecodeError as e:
-        print(f"  ⚠ JSONパースエラー: {e}\n  レスポンス: {raw[:200]}")
+        print(f"  ⚠ JSONパースエラー: {e}")
         return None
     except Exception as e:
-        print(f"  ⚠ Claude APIエラー: {e}")
+        print(f"  ⚠ Gemini APIエラー: {e}")
         return None
 
 
-def upsert_bias(supabase: Client, race_id: str, level: str | None, summary: str | None) -> None:
-    """track_bias を upcoming_races に upsert する"""
+def upsert_bias(
+    supabase: Client,
+    race_id: str,
+    level: str | None,
+    summary: str | None,
+) -> None:
     supabase.from_("upcoming_races").update({
         "track_bias_level":   level,
         "track_bias_summary": summary,
@@ -171,20 +132,24 @@ def upsert_bias(supabase: Client, race_id: str, level: str | None, summary: str 
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="レース分析データ生成（X投稿 + Claude）")
+    parser = argparse.ArgumentParser(description="レース分析データ生成（Gemini + Google Search）")
     parser.add_argument("--force", action="store_true", help="既存データも上書きする")
+    parser.add_argument("--date", type=str, help="対象日付（YYYY-MM-DD）。指定なしは全日程")
     args = parser.parse_args()
 
     check_env()
 
-    supabase    = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-    ai          = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-    twitter     = tweepy.Client(bearer_token=TWITTER_BEARER_TOKEN)
+    supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    client   = genai.Client(api_key=GEMINI_API_KEY)
 
-    print("=== generate_race_analysis.py ===")
+    print("=== generate_race_analysis.py (Gemini + Google Search) ===")
     print(f"モード: {'全レース上書き' if args.force else '未分析のみ'}")
+    if args.date:
+        print(f"対象日: {args.date}")
 
     races = fetch_upcoming_races(supabase, args.force)
+    if args.date:
+        races = [r for r in races if r["race_date"] == args.date]
     print(f"対象レース数: {len(races)}\n")
 
     if not races:
@@ -195,25 +160,17 @@ def main() -> None:
     skip    = 0
 
     for i, race in enumerate(races, 1):
-        race_id  = race["race_id"]
+        race_id   = race["race_id"]
         race_date = race["race_date"]
-        track    = race["track"]
-        surface  = race["surface"]
-        distance = race["distance"]
+        track     = race["track"]
+        surface   = race["surface"]
+        distance  = race["distance"]
 
         print(f"[{i}/{len(races)}] {track} {surface}{distance}m ({race_date}) — {race_id}")
+        print(f"  Gemini検索・分析中...")
 
-        # X投稿を検索
-        print(f"  X検索中...")
-        tweets_text = search_x_posts(twitter, track, race_date)
-        tweet_count = tweets_text.count("- ") if tweets_text else 0
-        print(f"  投稿取得: {tweet_count}件")
-        time.sleep(TWITTER_WAIT_SEC)
-
-        # Claude で分析
-        print(f"  Claude分析中...")
-        result = analyze_with_claude(ai, track, surface, distance, tweets_text)
-        time.sleep(ANTHROPIC_WAIT_SEC)
+        result = analyze_with_gemini(client, track, surface, distance, race_date)
+        time.sleep(WAIT_SEC)
 
         if result is None:
             print(f"  ⚠ スキップ（分析失敗）")
@@ -223,10 +180,10 @@ def main() -> None:
         level   = result.get("track_bias_level")
         summary = result.get("track_bias_summary")
 
-        if not summary:
-            print(f"  ℹ バイアス情報なし（投稿不足）→ null で保存")
+        if summary:
+            print(f"  ✅ level={level}  {summary[:50]}...")
         else:
-            print(f"  ✅ level={level}  summary={summary[:40]}...")
+            print(f"  ℹ バイアス情報なし（情報不足）→ null で保存")
 
         upsert_bias(supabase, race_id, level, summary)
         success += 1
