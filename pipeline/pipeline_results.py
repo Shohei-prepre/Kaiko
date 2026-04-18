@@ -44,11 +44,11 @@ SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
 
-# race_id の開催場コード → 競馬場名
+# race_id の開催場コード（5〜6桁目）→ 競馬場名
 VENUE_MAP = {
     "01": "札幌", "02": "函館", "03": "福島", "04": "新潟",
-    "05": "東京", "06": "中山", "07": "阪神", "08": "小倉",
-    "09": "中京", "10": "中京", "11": "京都",
+    "05": "東京", "06": "中山", "07": "中京", "08": "京都",
+    "09": "阪神", "10": "小倉",
     "15": "金沢", "16": "笠松", "17": "名古屋", "18": "園田",
     "19": "姫路", "22": "佐賀", "23": "高知",
 }
@@ -91,15 +91,21 @@ def parse_finish_order(text: str) -> int | None:
     return None  # "中止", "除外", "失格" など
 
 
-def race_date_from_id(race_id: str) -> str:
-    """race_id の先頭 8 桁 YYYYMMDD を YYYY-MM-DD 形式に変換する"""
-    d = race_id[:8]
-    return f"{d[:4]}-{d[4:6]}-{d[6:8]}"
+def race_date_from_html(soup: BeautifulSoup) -> str | None:
+    """
+    netkeiba HTMLから開催日を取得する。
+    race_id の先頭8桁は YYYYMMDD ではなく year+venue+kai なので使えない。
+    """
+    text = soup.get_text()
+    m = re.search(r"(\d{4})年(\d{1,2})月(\d{1,2})日", text)
+    if m:
+        return f"{m.group(1)}-{m.group(2).zfill(2)}-{m.group(3).zfill(2)}"
+    return None
 
 
 def venue_from_id(race_id: str) -> str:
-    """race_id の 9〜10 桁目（開催場コード）から競馬場名を返す"""
-    code = race_id[8:10]
+    """race_id の 5〜6 桁目（開催場コード）から競馬場名を返す"""
+    code = race_id[4:6]
     return VENUE_MAP.get(code, f"不明({code})")
 
 
@@ -143,10 +149,12 @@ def scrape_race(race_id: str) -> dict | None:
     # ── ラップタイム ──
     lap_times = _parse_lap_times(soup)
 
-    # ── 開催場・race_number ──
+    # ── 開催場・race_number・日付 ──
     track = venue_from_id(race_id)
     race_number = int(race_id[-2:])
-    race_date = race_date_from_id(race_id)
+    race_date = race_date_from_html(soup) or f"{race_id[:4]}-01-01"  # fallback
+    if not race_date_from_html(soup):
+        print(f"  ⚠️  日付をHTMLから取得できませんでした（race_id={race_id}）")
 
     # ── 結果テーブル ──
     table = soup.select_one(".RaceTable01")
