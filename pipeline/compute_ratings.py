@@ -1,5 +1,5 @@
 """
-compute_ratings.py — グローバルレーティング計算スクリプト
+compute_ratings.py — グローバルレーティング計算スクリプト（Dual-Solve Blend版）
 
 全レースの全出走ペア間の補正後着差を最小二乗法で同時に解き、
 各馬の能力レーティングを算出して Supabase の horse_ratings テーブルに upsert する。
@@ -8,12 +8,21 @@ compute_ratings.py — グローバルレーティング計算スクリプト
   minimize Σ w_ij × (r_A - r_B - adjustedDiff(A,B))²
     r[]         : 各馬の能力値（求めたい変数）
     adjustedDiff: 着差差 + LLM補正差 + track_bias（比較ページと同じ計算）
-    w           : 時間減衰 × LLM補正有無の重み
+    w           : 時間減衰 × LLM補正有無 × 補正ペナルティ（施策1）
+
+【Dual-Solve Blend（施策2）】
+  1. raw solve  : 補正を全て0として生の着差だけでIRLS → raw_rating
+  2. corr solve : 補正+施策1ペナルティ込みでIRLS → corrected_rating
+  3. blend      : 2つの差が大きい馬ほどrawの方向に引き戻す
+    gap         = |corrected - raw|
+    blend_ratio = min(gap / BLEND_THRESHOLD, MAX_BLEND)
+    final       = corrected × (1 - blend_ratio) + raw × blend_ratio
 
 【重みパラメータ】
-  時間減衰 : 0.75 ^ years_ago（1年で×0.75、2年で×0.5625）
-  LLM補正あり : weight × 1.0
-  LLM補正なし : weight × 0.5（着差ベースのみ、ノイズが多いため低め）
+  時間減衰        : 0.75 ^ years_ago（1年で×0.75、2年で×0.5625）
+  LLM補正あり     : weight × 1.0
+  LLM補正なし     : weight × 0.5（着差ベースのみ、ノイズが多いため低め）
+  補正ペナルティ  : 1 / (1 + (total_correction / 2.0)^2)（大きい補正ほど重みを下げる）
 
 使い方:
   cd pipeline
@@ -58,6 +67,14 @@ FETCH_PAGE_SIZE   = 1000   # Supabase 取得のページサイズ（デフォル
 UPSERT_BATCH_SIZE = 500    # upsert のバッチサイズ
 CORRECTION_CAP    = 3.0    # trouble_value の上限（馬身）
 RATING_DAMP       = 0.05   # L2正則化係数。証拠の薄い馬のratingを0に引き戻す
+
+# 施策1：補正ペナルティ閾値
+# この補正量（馬身）でペナルティが50%になる。小さいほど補正への懐疑が強い
+CORRECTION_PENALTY_THRESHOLD = 2.0
+
+# 施策2：Dual-Solve Blendパラメータ
+BLEND_THRESHOLD = 3.0   # この差（馬身）でblend_ratioが最大に達する
+MAX_BLEND       = 0.5   # 最大ブレンド比率（rawに引き戻す最大割合）
 
 # trouble以外の補正係数（1.0=そのまま、0.5=半分に緩める）
 # ペース・馬場・気性・体重は主観評価のブレが大きいため緩めに設定
@@ -128,9 +145,11 @@ def adjusted_diff(
     pb: dict,
     cum_map: dict[int, float],
     track_bias: float,
+    use_corrections: bool = True,
 ) -> float:
     """
     2頭の補正後能力差を計算する（正 = pa が pb より強い）。
+    use_corrections=False のとき補正・track_biasを無視し生の着差のみ返す。
     着差データがあれば累積着差ベース、なければ着順差×0.5 にフォールバック。
     """
     ca = cum_map.get(pa["horse_id"])
@@ -141,6 +160,9 @@ def adjusted_diff(
     else:
         base_diff = (pb["finish_order"] - pa["finish_order"]) * 0.5
 
+    if not use_corrections:
+        return base_diff
+
     corr_a = correction_sum(pa)
     corr_b = correction_sum(pb)
     return base_diff + corr_a - corr_b + track_bias
@@ -150,10 +172,14 @@ def adjusted_diff(
 
 def build_pairs(
     all_perfs: list[dict],
+    use_corrections: bool = True,
 ) -> list[tuple[int, int, float, float]]:
     """
     全レースの全出走ペアを生成する。
     disregard の馬はスキップ。重みが MIN_WEIGHT 未満もスキップ。
+
+    use_corrections=False のとき補正を無視した rawペアを生成（Dual-Solve Blend用）。
+    use_corrections=True のとき施策1の補正ペナルティも重みに乗算する。
 
     Returns:
         [(horse_id_a, horse_id_b, adjusted_diff, weight)]
@@ -171,19 +197,26 @@ def build_pairs(
         if len(valid) < 2:
             continue
 
-        race_date   = valid[0].get("race_date", "")
-        track_bias  = valid[0].get("track_bias_value") or 0.0
-        t_w         = time_weight(race_date)
+        race_date  = valid[0].get("race_date", "")
+        track_bias = float(valid[0].get("track_bias_value") or 0.0) if use_corrections else 0.0
+        t_w        = time_weight(race_date)
 
         cum_map = build_cum_margins(valid)
 
         for i, pa in enumerate(valid):
             for pb in valid[i + 1:]:
-                diff = adjusted_diff(pa, pb, cum_map, float(track_bias))
+                diff = adjusted_diff(pa, pb, cum_map, track_bias, use_corrections)
 
                 # LLM補正の有無でウェイト調整
                 llm_w = 1.0 if (has_llm(pa) and has_llm(pb)) else LLM_ABSENT_WEIGHT
-                w     = t_w * llm_w
+
+                if use_corrections:
+                    # 施策1：補正ペナルティ — 補正量が大きいほど重みを下げる
+                    total_corr = abs(correction_sum(pa)) + abs(correction_sum(pb))
+                    corr_penalty = 1.0 / (1.0 + (total_corr / CORRECTION_PENALTY_THRESHOLD) ** 2)
+                    w = t_w * llm_w * corr_penalty
+                else:
+                    w = t_w * llm_w
 
                 if w < MIN_WEIGHT:
                     continue
@@ -289,7 +322,7 @@ def main() -> None:
 
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
-    print("=== compute_ratings.py ===")
+    print("=== compute_ratings.py (Dual-Solve Blend) ===")
     print("1. horse_performances を全件取得中...")
 
     all_perfs: list[dict] = []
@@ -324,20 +357,57 @@ def main() -> None:
         print("❌ データが0件です。")
         sys.exit(1)
 
-    print("\n2. ペア生成中...")
-    pairs = build_pairs(all_perfs)
-    print(f"  {len(pairs)} ペア生成")
+    # ── Step 1: rawペア生成（補正なし） ──────────────────────────────────────
+    print("\n2. rawペア生成中（補正なし・time_decay/llm_weightのみ）...")
+    raw_pairs = build_pairs(all_perfs, use_corrections=False)
+    print(f"  {len(raw_pairs)} ペア生成")
 
-    if not pairs:
-        print("❌ 有効なペアが0件です。データを確認してください。")
+    if not raw_pairs:
+        print("❌ 有効なrawペアが0件です。データを確認してください。")
         sys.exit(1)
 
-    print("\n3. レーティング計算中（最小二乗法）...")
-    ratings = solve_ratings(pairs)
-    print(f"  {len(ratings)} 頭の rating を算出")
+    # ── Step 2: correctedペア生成（補正+ペナルティあり） ─────────────────────
+    print("\n3. correctedペア生成中（補正+施策1ペナルティ）...")
+    corrected_pairs = build_pairs(all_perfs, use_corrections=True)
+    print(f"  {len(corrected_pairs)} ペア生成")
 
-    print("\n4. 残差・接続数を計算中...")
-    errors, connections = calc_errors_and_connections(pairs, ratings)
+    # ── Step 3: raw solve ────────────────────────────────────────────────────
+    print("\n4. rawレーティング計算中（最小二乗法）...")
+    raw_ratings = solve_ratings(raw_pairs)
+    print(f"  {len(raw_ratings)} 頭の raw_rating を算出")
+
+    # ── Step 4: corrected solve ──────────────────────────────────────────────
+    print("\n5. correctedレーティング計算中（最小二乗法）...")
+    corrected_ratings = solve_ratings(corrected_pairs)
+    print(f"  {len(corrected_ratings)} 頭の corrected_rating を算出")
+
+    # ── Step 5: Dual-Solve Blend ─────────────────────────────────────────────
+    print(f"\n6. Dual-Solve Blend（BLEND_THRESHOLD={BLEND_THRESHOLD}, MAX_BLEND={MAX_BLEND}）...")
+    all_horses = set(raw_ratings.keys()) | set(corrected_ratings.keys())
+    final_ratings: dict[int, float] = {}
+    blend_stats = {"no_blend": 0, "partial": 0, "max_blend": 0}
+
+    for h in all_horses:
+        raw_r  = raw_ratings.get(h, 0.0)
+        corr_r = corrected_ratings.get(h, 0.0)
+        gap    = abs(corr_r - raw_r)
+        blend_ratio = min(gap / BLEND_THRESHOLD, MAX_BLEND)
+        final_ratings[h] = corr_r * (1 - blend_ratio) + raw_r * blend_ratio
+
+        if blend_ratio == 0:
+            blend_stats["no_blend"] += 1
+        elif blend_ratio >= MAX_BLEND:
+            blend_stats["max_blend"] += 1
+        else:
+            blend_stats["partial"] += 1
+
+    print(f"  ブレンドなし: {blend_stats['no_blend']} 頭")
+    print(f"  部分ブレンド: {blend_stats['partial']} 頭")
+    print(f"  最大ブレンド（≥{MAX_BLEND}）: {blend_stats['max_blend']} 頭")
+
+    # ── Step 6: 残差・接続数（final_ratingsに対して再計算） ──────────────────
+    print("\n7. 残差・接続数を計算中（correctedペア × final_ratings）...")
+    errors, connections = calc_errors_and_connections(corrected_pairs, final_ratings)
 
     # 走数カウント（disregard 除外）
     race_counts: dict[int, set[str]] = defaultdict(set)
@@ -345,9 +415,10 @@ def main() -> None:
         if p.get("eval_tag") != "disregard":
             race_counts[p["horse_id"]].add(p["race_id"])
 
-    print("\n5. horse_ratings に upsert 中...")
+    # ── Step 7: upsert ───────────────────────────────────────────────────────
+    print("\n8. horse_ratings に upsert 中...")
     records = []
-    for horse_id, rating in ratings.items():
+    for horse_id, rating in final_ratings.items():
         rc = len(race_counts.get(horse_id, set()))
         if rc < MIN_RACES:
             continue  # 走数不足はスキップ（フロントで非表示）
@@ -359,7 +430,7 @@ def main() -> None:
             "connected_horses": connections.get(horse_id, 0),
         })
 
-    print(f"  upsert 対象: {len(records)} 頭（{len(ratings) - len(records)} 頭は走数不足でスキップ）")
+    print(f"  upsert 対象: {len(records)} 頭（{len(final_ratings) - len(records)} 頭は走数不足でスキップ）")
 
     for i in range(0, len(records), UPSERT_BATCH_SIZE):
         chunk = records[i : i + UPSERT_BATCH_SIZE]
@@ -370,11 +441,11 @@ def main() -> None:
 
     print(f"\n{'='*50}")
     print(f"✅ 完了: {len(records)} 頭の rating を更新しました")
-    if ratings:
-        sorted_r = sorted(ratings.items(), key=lambda x: x[1], reverse=True)
-        print(f"\n  rating 上位5頭（horse_id: rating）:")
+    if final_ratings:
+        sorted_r = sorted(final_ratings.items(), key=lambda x: x[1], reverse=True)
+        print(f"\n  rating 上位5頭（horse_id: final_rating / corrected / raw）:")
         for hid, r in sorted_r[:5]:
-            print(f"    {hid}: {r:+.3f}")
+            print(f"    {hid}: final={r:+.3f}  corr={corrected_ratings.get(hid, 0):+.3f}  raw={raw_ratings.get(hid, 0):+.3f}")
 
 
 if __name__ == "__main__":
