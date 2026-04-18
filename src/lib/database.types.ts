@@ -159,15 +159,19 @@ export function isBuyCandidate(recentPerfs: RecentPerf[]): boolean {
  * なければ着順ベースにフォールバック。
  */
 export function calcCorrectedScore(perf: RecentPerf): number {
-  const ability =
-    (perf.trouble_value ?? 0) +
-    (perf.temperament_value ?? 0) +
-    (perf.weight_effect_value ?? 0) +
-    (perf.track_condition_value ?? 0) +
-    (perf.pace_effect_value ?? 0);
   const cm = perf.cumulative_margin;
-  const base = (cm !== null && cm !== undefined && Number.isFinite(cm)) ? cm : perf.finish_order;
-  return base - ability;
+  if (cm !== null && cm !== undefined && Number.isFinite(cm)) {
+    // 累積着差が取れている場合のみ補正を適用（スケールが一致する）
+    const ability =
+      (perf.trouble_value ?? 0) +
+      (perf.temperament_value ?? 0) +
+      (perf.weight_effect_value ?? 0) +
+      (perf.track_condition_value ?? 0) +
+      (perf.pace_effect_value ?? 0);
+    return cm - ability;
+  }
+  // 着順ベースのフォールバック時は補正なし（スケールが異なるため）
+  return perf.finish_order;
 }
 
 export interface ValueBetDetail {
