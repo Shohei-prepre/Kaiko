@@ -189,12 +189,39 @@ export interface ValueBetDetail {
  * 返り値: horse_id → ValueBetDetail の Map（フラグ立ちの馬のみ）
  */
 export function calcValueBetDetails(
-  entries: UpcomingEntryWithForm[]
+  entries: UpcomingEntryWithForm[],
+  /** horse_ratings から事前計算したランクマップ。渡された場合は近走スコアの代わりに使用 */
+  precomputedRankMap?: Map<number, number>
 ): Map<number, ValueBetDetail> {
   const result = new Map<number, ValueBetDetail>();
 
-  const withScore = entries
-    .filter((e) => e.horse_id !== null && e.odds !== null && e.popularity !== null)
+  const eligible = entries.filter(
+    (e) => e.horse_id !== null && e.odds !== null && e.popularity !== null
+  );
+
+  if (precomputedRankMap && precomputedRankMap.size > 0) {
+    // horse_ratings ベース: ランクマップを直接使用
+    eligible.forEach((e) => {
+      const abilityRank = precomputedRankMap.get(e.horse_id!);
+      if (abilityRank === undefined) return;
+      const oddsRank = e.popularity!;
+      const valid = e.recentPerfs.filter((p) => p.eval_tag !== "disregard");
+      if (abilityRank < oddsRank) {
+        result.set(e.horse_id!, {
+          abilityRank,
+          oddsRank,
+          avgScore: Math.round(
+            (valid.reduce((sum, p) => sum + calcCorrectedScore(p), 0) / Math.max(valid.length, 1)) * 10
+          ) / 10,
+          racesAnalyzed: valid.length,
+        });
+      }
+    });
+    return result;
+  }
+
+  // フォールバック: 近走補正スコア平均ベース
+  const withScore = eligible
     .map((e) => {
       const valid = e.recentPerfs.filter((p) => p.eval_tag !== "disregard");
       // 最低1走の非度外視データが必要

@@ -301,7 +301,10 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
     .forEach((e, i) => raceRatingRankMap.set(e.horse_id!, i + 1));
 
   const buyCandidates = entriesWithForm.filter((e) => isBuyCandidate(e.recentPerfs));
-  const valueBetMap = calcValueBetDetails(entriesWithForm);
+  const valueBetMap = calcValueBetDetails(
+    entriesWithForm,
+    raceRatingRankMap.size > 0 ? raceRatingRankMap : undefined
+  );
   const picksMap = calcHorsePicks(
     entriesWithForm, valueBetMap, 0.3, 0.75,
     raceRatingRankMap.size > 0 ? raceRatingRankMap : undefined
