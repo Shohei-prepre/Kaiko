@@ -9,14 +9,13 @@ import type {
   EvalTag,
   HorseRating,
 } from "@/lib/database.types";
-import { isBuyCandidate, calcValueBetDetails, calcHorsePicks, calcAllAbilityRanks } from "@/lib/database.types";
+import { isBuyCandidate, calcAllAbilityRanks } from "@/lib/database.types";
 import { buildRaceMarginMaps } from "@/lib/parseMargin";
 import { getCourseCharacteristic } from "@/lib/courseCharacteristics";
 import BottomNav from "@/components/BottomNav";
 import BackButton from "@/components/BackButton";
-import EntryList from "./EntryList";
 import RaceNavBar from "./RaceNavBar";
-import RaceAnalysisSection from "./RaceAnalysisSection";
+import UpcomingRaceClient from "./UpcomingRaceClient";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -340,14 +339,6 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
     .forEach((e, i) => raceRatingRankMap.set(e.horse_id!, i + 1));
 
   const buyCandidates = entriesWithForm.filter((e) => isBuyCandidate(e.recentPerfs));
-  const valueBetMap = calcValueBetDetails(
-    entriesWithForm,
-    raceRatingRankMap.size > 0 ? raceRatingRankMap : undefined
-  );
-  const picksMap = calcHorsePicks(
-    entriesWithForm, valueBetMap, 0.3, 0.75,
-    raceRatingRankMap.size > 0 ? raceRatingRankMap : undefined
-  );
   // rating ランクがある場合はそれを優先、なければ従来の補正スコアベースにフォールバック
   const abilityRankMap = raceRatingRankMap.size > 0
     ? raceRatingRankMap
@@ -370,8 +361,6 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
       runningStyle: e.horse_id ? (runningStyleMap.get(e.horse_id) ?? null) : null,
     }));
 
-  const valueBetArr = Array.from(valueBetMap.entries());
-  const picksArr = Array.from(picksMap.entries());
   const runningStyleArr = Array.from(runningStyleMap.entries());
   const abilityRankArr = Array.from(abilityRankMap.entries());
   const ratingArr: [number, number][] = [...ratingByHorseId.entries()].map(([hid, r]) => [hid, r.rating]);
@@ -437,34 +426,21 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
           </div>
         </section>
 
-        {/* コース特性 + トラックバイアス予想 + 展開予想 */}
-        <RaceAnalysisSection
+        {/* コース特性・トラックバイアス・展開予想 + 出馬表（クライアントコンポーネント） */}
+        <UpcomingRaceClient
           track={race.track}
           surface={race.surface}
           distance={race.distance}
+          entriesWithForm={entriesWithForm}
+          ratingArr={ratingArr}
+          abilityRankArr={abilityRankArr}
+          runningStyleArr={runningStyleArr}
+          paceResult={paceResult}
           courseChar={courseChar}
           trackBiasLevel={race.track_bias_level}
           trackBiasSummary={race.track_bias_summary}
-          pacePattern={paceResult.pattern}
-          paceSummary={paceResult.summary}
           runningStyleEntries={runningStyleEntries}
-        />
-
-        {/* 出走馬リスト */}
-        <div className="flex items-center gap-2 px-1 pt-1">
-          <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-[18px]">list_alt</span>
-          <span className="text-[12px] font-black text-[#131313] uppercase tracking-wider">
-            出馬表（{entriesWithForm.length}頭）
-          </span>
-        </div>
-
-        <EntryList
-          entriesWithForm={entriesWithForm}
-          valueBetMap={valueBetArr}
-          runningStyleMap={runningStyleArr}
-          abilityRankMap={abilityRankArr}
-          picksMap={picksArr}
-          ratingMap={ratingArr}
+          entryCount={entriesWithForm.length}
         />
 
         {/* 次走買い候補サマリー */}

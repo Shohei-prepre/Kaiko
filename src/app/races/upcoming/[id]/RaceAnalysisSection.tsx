@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { CourseCharacteristic } from "@/lib/courseCharacteristics";
 
 interface RunningStyleEntry {
@@ -9,6 +8,8 @@ interface RunningStyleEntry {
   runningStyle: string | null;
 }
 
+type PaceTab = "前残り" | "差し有利" | "フラット";
+
 interface Props {
   track:    string;
   surface:  string;
@@ -16,12 +17,14 @@ interface Props {
   courseChar:          CourseCharacteristic | null;
   trackBiasLevel:      string | null;
   trackBiasSummary:    string | null;
-  pacePattern:         "前残り" | "差し有利" | "フラット";
+  pacePattern:         PaceTab;
   paceSummary:         string;
   runningStyleEntries: RunningStyleEntry[];
+  /** 親コンポーネントが保持する選択中のペースタブ */
+  selectedPace:        PaceTab;
+  /** タブ切替ハンドラ（親のstateを更新する） */
+  onPaceChange:        (pace: PaceTab) => void;
 }
-
-type PaceTab = "前残り" | "差し有利" | "フラット";
 
 /**
  * バイアスレベルに対応したバッジスタイルを返す
@@ -71,11 +74,11 @@ export default function RaceAnalysisSection({
   pacePattern,
   paceSummary,
   runningStyleEntries,
+  selectedPace,
+  onPaceChange,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<PaceTab>(pacePattern);
-
   const TABS: PaceTab[] = ["前残り", "差し有利", "フラット"];
-  const { favor, unfavor } = getFavorableStyles(activeTab);
+  const { favor, unfavor } = getFavorableStyles(selectedPace);
 
   const favorEntries  = runningStyleEntries.filter((e) => e.runningStyle && favor.includes(e.runningStyle));
   const unfavorEntries = runningStyleEntries.filter((e) => e.runningStyle && unfavor.includes(e.runningStyle));
@@ -152,9 +155,9 @@ export default function RaceAnalysisSection({
           {TABS.map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => onPaceChange(tab)}
               className={`flex-1 py-2.5 text-[12px] font-black transition-colors ${
-                activeTab === tab
+                selectedPace === tab
                   ? "text-[var(--kaiko-primary)] border-b-2 border-[var(--kaiko-primary)]"
                   : "text-[var(--kaiko-text-muted)]"
               }`}
@@ -166,7 +169,7 @@ export default function RaceAnalysisSection({
 
         {/* タブコンテンツ */}
         <div className="px-4 py-3 space-y-3">
-          {activeTab === "フラット" ? (
+          {selectedPace === "フラット" ? (
             /* フラット: 全馬並列表示 */
             <div>
               <p className="text-[10px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider mb-2">出走馬（脚質別）</p>
@@ -192,7 +195,7 @@ export default function RaceAnalysisSection({
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <span className="text-[10px] font-black text-[var(--kaiko-tag-green-text)] uppercase tracking-wider">▲ 有利</span>
                     <span className="text-[10px] text-[var(--kaiko-text-muted)]">
-                      {activeTab === "前残り" ? "逃げ・先行" : "差し・追い込み"}
+                      {selectedPace === "前残り" ? "逃げ・先行" : "差し・追い込み"}
                     </span>
                   </div>
                   <div className="space-y-1">
@@ -215,7 +218,7 @@ export default function RaceAnalysisSection({
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <span className="text-[10px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider">▽ 不利</span>
                     <span className="text-[10px] text-[var(--kaiko-text-muted)]">
-                      {activeTab === "前残り" ? "差し・追い込み" : "逃げ・先行"}
+                      {selectedPace === "前残り" ? "差し・追い込み" : "逃げ・先行"}
                     </span>
                   </div>
                   <div className="space-y-1 opacity-60">
