@@ -112,24 +112,30 @@ export default function RaceAnalysisSection({
         </section>
       )}
 
-      {/* ② トラックバイアス予想（LLMデータがある場合のみ） */}
-      {trackBiasSummary && (
-        <section className="bg-white rounded-xl overflow-hidden border border-black/8">
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-black/4 border-b border-black/8">
-            <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
-            <span className="text-[10px] font-black text-[#131313] uppercase tracking-wider">トラックバイアス予想</span>
+      {/* ② トラックバイアス予想（常時表示・データなし時は「なし」） */}
+      <section className="bg-white rounded-xl overflow-hidden border border-black/8">
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-black/4 border-b border-black/8">
+          <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
+          <span className="text-[10px] font-black text-[#131313] uppercase tracking-wider">トラックバイアス予想</span>
+          {trackBiasSummary && (
             <div className="ml-auto">
               <span className={`text-[11px] font-black px-2 py-0.5 rounded-full ${biasStyle.bgCls} ${biasStyle.textCls}`}>
                 {biasStyle.label}
               </span>
             </div>
-          </div>
-          <div className="px-4 py-3">
-            <p className="text-[12px] font-bold text-[#131313] leading-snug">{trackBiasSummary}</p>
-            <p className="text-[10px] text-[var(--kaiko-text-muted)] mt-1.5">X投稿をもとにAIが分析</p>
-          </div>
-        </section>
-      )}
+          )}
+        </div>
+        <div className="px-4 py-3">
+          {trackBiasSummary ? (
+            <>
+              <p className="text-[12px] font-bold text-[#131313] leading-snug">{trackBiasSummary}</p>
+              <p className="text-[10px] text-[var(--kaiko-text-muted)] mt-1.5">X投稿をもとにAIが分析</p>
+            </>
+          ) : (
+            <p className="text-[12px] text-[var(--kaiko-text-muted)]">なし</p>
+          )}
+        </div>
+      </section>
 
       {/* ③ 展開予想タブ */}
       <section className="bg-white rounded-xl overflow-hidden border border-black/8">
