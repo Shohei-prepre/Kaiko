@@ -152,13 +152,13 @@ export default function EntryList({
   const userPicksMap     = new Map<number, string>(userPicksArr);
 
   // グリッド列定義：人気 | 馬番 | 印 | 馬名 | 能力 | 適正 | 単勝/近走
-  const GRID_COLS = "34px 26px 24px 1fr 36px 36px 56px";
+  const GRID_COLS = "28px 22px 20px 1fr 32px 32px 52px";
 
   return (
     <section className="bg-white rounded-xl overflow-hidden border border-black/8">
       {/* テーブルヘッダー */}
       <div
-        className="grid gap-2 px-3 py-2.5 bg-black/4 border-b border-black/8 items-center"
+        className="grid gap-1 px-3 py-2.5 bg-black/4 border-b border-black/8 items-center"
         style={{ gridTemplateColumns: GRID_COLS }}
       >
         <span className="text-[11px] font-black text-[var(--kaiko-text-muted)] text-center">人気</span>
@@ -185,7 +185,7 @@ export default function EntryList({
             return (
               <div key={entry.id} className="border-b border-black/6 last:border-b-0 opacity-40">
                 <div
-                  className="grid gap-2 px-3 py-3.5 items-center"
+                  className="grid gap-1 px-3 py-3.5 items-center"
                   style={{ gridTemplateColumns: GRID_COLS }}
                 >
                   <div className="flex items-center justify-center">
@@ -249,7 +249,7 @@ export default function EntryList({
             >
               {/* メイン行 */}
               <div
-                className={`grid gap-2 px-3 py-3.5 items-center ${isExpandable ? "cursor-pointer active:bg-black/4" : ""}`}
+                className={`grid gap-1 px-3 py-3.5 items-center ${isExpandable ? "cursor-pointer active:bg-black/4" : ""}`}
                 style={{ gridTemplateColumns: GRID_COLS }}
                 onClick={() => isExpandable ? setExpandedId(isExpanded ? null : entry.id) : undefined}
               >
@@ -342,11 +342,11 @@ export default function EntryList({
                     <>
                       <span className={`font-black leading-none ${
                         adjustedRank === 1 ? "text-[22px] text-orange-500"
-                        : adjustedRank <= 3 ? "text-[18px] text-orange-400"
+                        : adjustedRank <= 3 ? "text-[18px] text-[#131313]"
                         : "text-[15px] text-[var(--kaiko-text-muted)]"
                       }`}>{adjustedRank}</span>
                       <span className={`text-[9px] font-black leading-none ${
-                        adjustedRank <= 3 ? "text-orange-400" : "text-[var(--kaiko-text-muted)]"
+                        adjustedRank === 1 ? "text-orange-500" : adjustedRank <= 3 ? "text-[#131313]" : "text-[var(--kaiko-text-muted)]"
                       }`}>位</span>
                     </>
                   ) : (
@@ -412,11 +412,11 @@ export default function EntryList({
                         <div className="flex items-baseline justify-center gap-0">
                           <span className={`font-black leading-none ${
                             adjustedRank === 1 ? "text-[26px] text-orange-500"
-                            : (adjustedRank ?? 99) <= 3 ? "text-[22px] text-orange-400"
+                            : (adjustedRank ?? 99) <= 3 ? "text-[22px] text-[#131313]"
                             : "text-[18px] text-[var(--kaiko-text-muted)]"
                           }`}>{adjustedRank ?? "—"}</span>
                           {adjustedRank !== undefined && (
-                            <span className={`text-[10px] font-black ${(adjustedRank ?? 99) <= 3 ? "text-orange-400" : "text-[var(--kaiko-text-muted)]"}`}>位</span>
+                            <span className={`text-[10px] font-black ${adjustedRank === 1 ? "text-orange-500" : (adjustedRank ?? 99) <= 3 ? "text-[#131313]" : "text-[var(--kaiko-text-muted)]"}`}>位</span>
                           )}
                         </div>
                         <p className="text-[9px] text-[var(--kaiko-text-muted)] mt-0.5">展開・枠補正</p>
