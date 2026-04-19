@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { CourseCharacteristic } from "@/lib/courseCharacteristics";
 
 type PaceTab = "前残り" | "差し有利" | "フラット";
@@ -50,34 +51,43 @@ export default function RaceAnalysisSection({
   onPaceChange,
 }: Props) {
   const TABS: PaceTab[] = ["前残り", "差し有利", "フラット"];
+  const [courseCharOpen, setCourseCharOpen] = useState(false);
 
   const biasStyle = biasLevelStyle(trackBiasLevel);
 
   return (
     <>
-      {/* ① コース特性カード */}
+      {/* ① コース特性カード（デフォルト折りたたみ） */}
       {courseChar && (
         <section className="bg-white rounded-xl overflow-hidden border border-black/8">
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-black/4 border-b border-black/8">
+          <button
+            className="w-full flex items-center gap-2 px-4 py-2.5 bg-black/4 active:bg-black/8 transition-colors"
+            onClick={() => setCourseCharOpen((v) => !v)}
+          >
             <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-[16px]">map</span>
             <span className="text-[10px] font-black text-[#131313] uppercase tracking-wider">
               コース特性 — {track} {surface}{distance}m
             </span>
-          </div>
-          <div className="divide-y divide-black/6">
-            <div className="px-4 py-2.5">
-              <span className="block text-[9px] font-black text-[var(--kaiko-primary)] uppercase tracking-wider mb-0.5">脚質傾向</span>
-              <span className="text-[12px] font-bold text-[#131313] leading-snug line-clamp-2">{courseChar.runningStyle}</span>
+            <span className="material-symbols-outlined text-[var(--kaiko-text-muted)] text-[18px] ml-auto">
+              {courseCharOpen ? "expand_less" : "expand_more"}
+            </span>
+          </button>
+          {courseCharOpen && (
+            <div className="divide-y divide-black/6 border-t border-black/8">
+              <div className="px-4 py-2.5">
+                <span className="block text-[9px] font-black text-[var(--kaiko-primary)] uppercase tracking-wider mb-0.5">脚質傾向</span>
+                <span className="text-[12px] font-bold text-[#131313] leading-snug line-clamp-2">{courseChar.runningStyle}</span>
+              </div>
+              <div className="px-4 py-2.5">
+                <span className="block text-[9px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider mb-0.5">枠順傾向</span>
+                <span className="text-[12px] font-bold text-[#131313] leading-snug line-clamp-2">{courseChar.postBias}</span>
+              </div>
+              <div className="px-4 py-2.5">
+                <span className="block text-[9px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider mb-0.5">特記</span>
+                <span className="text-[12px] font-bold text-[#131313] leading-snug line-clamp-2">{courseChar.notes}</span>
+              </div>
             </div>
-            <div className="px-4 py-2.5">
-              <span className="block text-[9px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider mb-0.5">枠順傾向</span>
-              <span className="text-[12px] font-bold text-[#131313] leading-snug line-clamp-2">{courseChar.postBias}</span>
-            </div>
-            <div className="px-4 py-2.5">
-              <span className="block text-[9px] font-black text-[var(--kaiko-text-muted)] uppercase tracking-wider mb-0.5">特記</span>
-              <span className="text-[12px] font-bold text-[#131313] leading-snug line-clamp-2">{courseChar.notes}</span>
-            </div>
-          </div>
+          )}
         </section>
       )}
 
