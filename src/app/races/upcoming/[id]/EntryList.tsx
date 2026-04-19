@@ -127,6 +127,8 @@ interface Props {
   /** 展開・枠バイアス補正後の適正ランク */
   adjustedRankMap:  [number, number][];
   runningStyleMap:  [number, string][];
+  /** horse_id → rating値 */
+  ratingMap:        [number, number][];
   /** 有効な印（ユーザー選択 or デフォルト自動付与） */
   userPicksMap:     [number, string][];
   /** 現在ピッカーを開いている horse_id */
@@ -140,6 +142,7 @@ export default function EntryList({
   abilityRankMap:   abilityRankArr,
   adjustedRankMap:  adjustedRankArr,
   runningStyleMap:  runningStyleArr,
+  ratingMap:        ratingArr,
   userPicksMap:     userPicksArr,
   pickerOpenId,
   onPickerToggle,
@@ -149,6 +152,7 @@ export default function EntryList({
   const runningStyleMap  = new Map<number, string>(runningStyleArr);
   const abilityRankMap   = new Map<number, number>(abilityRankArr);
   const adjustedRankMap  = new Map<number, number>(adjustedRankArr);
+  const ratingMap        = new Map<number, number>(ratingArr);
   const userPicksMap     = new Map<number, string>(userPicksArr);
 
   // グリッド列定義：人気 | 馬番 | 印 | 馬名 | 能力 | 適正 | 単勝/近走
@@ -226,6 +230,7 @@ export default function EntryList({
           const runningColor = runningStyle ? RUNNING_STYLE_COLOR[runningStyle] : null;
           const abilityRank  = abilityRankMap.get(entry.horse_id);
           const adjustedRank = adjustedRankMap.get(entry.horse_id);
+          const rating       = ratingMap.get(entry.horse_id);
           // abilityRankがある馬は展開可能
           const isExpandable = abilityRank !== undefined;
           // 印ピッカーが開いているかどうか
@@ -422,6 +427,14 @@ export default function EntryList({
                         <p className="text-[9px] text-[var(--kaiko-text-muted)] mt-0.5">展開・枠補正</p>
                       </div>
                     </div>
+
+                    {/* レーティング数値 */}
+                    {rating !== undefined && (
+                      <div className="flex items-center justify-between border-t border-black/8 pt-2">
+                        <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] uppercase tracking-wider">レーティング</span>
+                        <span className="text-[14px] font-black text-[#131313]">{rating.toFixed(2)}</span>
+                      </div>
+                    )}
 
                     {/* 自然言語説明 */}
                     <p className="text-[11px] text-[#131313] leading-snug border-t border-black/8 pt-2">

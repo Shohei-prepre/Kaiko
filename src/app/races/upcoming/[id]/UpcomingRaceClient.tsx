@@ -202,6 +202,7 @@ export default function UpcomingRaceClient({
         abilityRankMap={abilityRankArr}
         adjustedRankMap={adjustedRankArr}
         runningStyleMap={runningStyleArr}
+        ratingMap={ratingArr}
         userPicksMap={userPicksArr}
         pickerOpenId={pickerOpenId}
         onPickerToggle={handlePickerToggle}
