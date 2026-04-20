@@ -285,7 +285,8 @@ export default function RacesClient() {
 
   const _now = new Date();
   const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
-  const isFutureDate = dateStr >= today;
+  // 先週土曜日以降はすべて upcoming（予想）として表示
+  const isFutureDate = dateStr >= getWeekRange(-1).sat;
 
   useEffect(() => {
     const fallbackMock = MOCK_UPCOMING[activeDay === "sat" ? "SATURDAY" : "SUNDAY"] ?? [];
