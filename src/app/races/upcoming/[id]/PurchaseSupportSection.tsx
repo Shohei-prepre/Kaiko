@@ -174,7 +174,7 @@ export default function PurchaseSupportSection({
           local_activity
         </span>
         <span className="text-[10px] font-black text-[#131313] uppercase tracking-wider">
-          {activeTab}予想
+          買い目サポート
         </span>
         <span
           className={`ml-auto text-[9px] font-black px-1.5 py-0.5 rounded-full ${
