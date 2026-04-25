@@ -316,12 +316,14 @@ function FormationRow({
   rest,
   isTrifecta,
   color,
+  perPoint,
 }: {
   label: string;
   axis: Horse[];
   rest: Horse[];
   isTrifecta: boolean;
   color: string;
+  perPoint?: number;
 }) {
   const tickets = rest.length;
   const slots = [
@@ -334,7 +336,18 @@ function FormationRow({
     <div className="py-1.5">
       <div className="flex items-center gap-2 mb-1.5">
         <BetLabel label={label} color={color} />
-        <span className="ml-auto text-[10px] font-black text-[#131313]">{tickets}点</span>
+        {perPoint ? (
+          <>
+            <span className="text-[10px] text-[var(--kaiko-text-muted)]">
+              {tickets}点 × {perPoint}円
+            </span>
+            <span className="ml-auto text-[10px] font-black text-[#131313]">
+              {(tickets * perPoint).toLocaleString()}円
+            </span>
+          </>
+        ) : (
+          <span className="ml-auto text-[10px] font-black text-[#131313]">{tickets}点</span>
+        )}
       </div>
 
       {/* スロット表示 */}
@@ -447,74 +460,62 @@ export default function PurchaseSupportSection({
 
             <div className="divide-y divide-black/6">
               {activeTab === "コツコツ" ? (
-                /* コツコツ: 単勝+複勝 or ワイド+馬連（配分%付き・3連なし） */
-                isLargeGap ? (
-                  <>
-                    <SimpleBetRow
-                      label="単勝"
-                      horses={[rank1]}
-                      color="var(--kaiko-primary)"
-                      allocation="20%"
-                    />
-                    <SimpleBetRow
-                      label="複勝"
-                      horses={[rank1]}
-                      color="var(--kaiko-tag-green-text)"
-                      allocation="80%"
-                    />
-                  </>
-                ) : (
-                  <>
-                    <SimpleBetRow
-                      label="ワイド"
-                      horses={[rank1, rank2]}
-                      color="var(--kaiko-tag-green-text)"
-                      allocation="70%"
-                    />
-                    <SimpleBetRow
-                      label="馬連"
-                      horses={[rank1, rank2]}
-                      color="#60a5fa"
-                      allocation="30%"
-                    />
-                  </>
-                )
+                /* コツコツ: 単勝+複勝 or ワイド+馬連（1,000円ベース） */
+                <>
+                  <div className="divide-y divide-black/6">
+                    {isLargeGap ? (
+                      <>
+                        <SimpleBetRow label="単勝" horses={[rank1]} color="var(--kaiko-primary)" allocation="200円" />
+                        <SimpleBetRow label="複勝" horses={[rank1]} color="var(--kaiko-tag-green-text)" allocation="800円" />
+                      </>
+                    ) : (
+                      <>
+                        <SimpleBetRow label="ワイド" horses={[rank1, rank2]} color="var(--kaiko-tag-green-text)" allocation="700円" />
+                        <SimpleBetRow label="馬連"   horses={[rank1, rank2]} color="#60a5fa"                      allocation="300円" />
+                      </>
+                    )}
+                  </div>
+                  <div className="flex justify-end items-center pt-2 mt-1 border-t border-black/8">
+                    <span className="text-[10px] text-[var(--kaiko-text-muted)] mr-1.5">合計</span>
+                    <span className="text-[13px] font-black text-[#131313]">1,000円</span>
+                  </div>
+                </>
               ) : activeTab === "エクスタシー" ? (
                 <GamblerSection top5={top5} />
               ) : (
-                /* ワーキング: 単勝 or 馬連 + 3連複F（+ 3連単F は一強のみ） */
+                /* ワーキング: 単勝100 or 馬連400 + 3連複F(各100or200) + 3連単F(各200) 計1,000円 */
                 <>
-                  {isLargeGap ? (
-                    <SimpleBetRow
-                      label="単勝"
-                      horses={[rank1]}
-                      color="var(--kaiko-primary)"
-                    />
-                  ) : (
-                    <SimpleBetRow
-                      label="馬連"
-                      horses={[rank1, rank2]}
-                      color="#60a5fa"
-                    />
-                  )}
-                  {rest.length > 0 && (
-                    <FormationRow
-                      label="3連複F"
-                      axis={[rank1, rank2]}
-                      rest={rest}
-                      isTrifecta={false}
-                      color="var(--kaiko-text-muted)"
-                    />
-                  )}
-                  {isLargeGap && rest.length > 0 && (
-                    <FormationRow
-                      label="3連単F"
-                      axis={[rank1, rank2]}
-                      rest={rest}
-                      isTrifecta={true}
-                      color="var(--kaiko-primary)"
-                    />
-                  )}
+                  <div className="divide-y divide-black/6">
+                    {isLargeGap ? (
+                      <SimpleBetRow label="単勝" horses={[rank1]} color="var(--kaiko-primary)" allocation="100円" />
+                    ) : (
+                      <SimpleBetRow label="馬連" horses={[rank1, rank2]} color="#60a5fa" allocation="400円" />
+                    )}
+                    {rest.length > 0 && (
+                      <FormationRow
+                        label="3連複F"
+                        axis={[rank1, rank2]}
+                        rest={rest}
+                        isTrifecta={false}
+                        color="var(--kaiko-text-muted)"
+                        perPoint={isLargeGap ? 100 : 200}
+                      />
+                    )}
+                    {isLargeGap && rest.length > 0 && (
+                      <FormationRow
+                        label="3連単F"
+                        axis={[rank1, rank2]}
+                        rest={rest}
+                        isTrifecta={true}
+                        color="var(--kaiko-primary)"
+                        perPoint={200}
+                      />
+                    )}
+                  </div>
+                  <div className="flex justify-end items-center pt-2 mt-1 border-t border-black/8">
+                    <span className="text-[10px] text-[var(--kaiko-text-muted)] mr-1.5">合計</span>
+                    <span className="text-[13px] font-black text-[#131313]">1,000円</span>
+                  </div>
                 </>
               )}
             </div>
