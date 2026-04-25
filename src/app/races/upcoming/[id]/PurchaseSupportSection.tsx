@@ -50,7 +50,7 @@ function SimpleBetRow({ label, horses, color }: { label: string; horses: Horse[]
             {i > 0 && <span className="text-[10px] text-[var(--kaiko-text-muted)] font-bold">–</span>}
             <span className="text-[11px] font-black text-[#131313] mr-0.5">{i === 0 ? "◎" : "○"}</span>
             <HorseNum num={h.num} />
-            <span className="text-[11px] font-bold text-[#131313] ml-1 max-w-[90px] truncate">{h.name}</span>
+            <span className="text-[11px] font-bold text-[#131313] ml-1 break-all">{h.name}</span>
           </div>
         ))}
       </div>
