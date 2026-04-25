@@ -437,6 +437,7 @@ export default async function UpcomingRaceDetailPage({ params }: Props) {
           trackBiasLevel={race.track_bias_level}
           trackBiasSummary={race.track_bias_summary}
           entryCount={entriesWithForm.length}
+          raceId={id}
         />
 
         {/* 次走買い候補サマリー */}

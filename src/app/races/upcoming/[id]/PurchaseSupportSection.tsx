@@ -8,10 +8,25 @@ const LARGE_GAP_THRESHOLD = 0.5;
 
 type PersonalityTab = "コツコツ" | "ワーキング" | "エクスタシー";
 
+/** タブごとの基準金額 */
+const BASE_AMOUNT: Record<PersonalityTab, number> = {
+  "コツコツ":    1000,
+  "ワーキング":  1000,
+  "エクスタシー": 2000,
+};
+
+/** タブごとの金額プリセット */
+const PRESETS: Record<PersonalityTab, number[]> = {
+  "コツコツ":    [1000, 2000, 5000, 10000],
+  "ワーキング":  [1000, 2000, 5000, 10000],
+  "エクスタシー": [2000, 4000, 10000, 20000],
+};
+
 interface Props {
   /** [horse_id, adjusted_score] — score降順で並んでいること */
   adjustedScores: [number, number][];
   entriesWithForm: UpcomingEntryWithForm[];
+  raceId: string;
   defaultOpen?: boolean;
 }
 
@@ -43,17 +58,19 @@ function BetLabel({ label, color }: { label: string; color: string }) {
   );
 }
 
-/** 単勝 / 複勝 / ワイド / 馬連 — 配分% バッジ付き */
+/** 単勝 / 複勝 / ワイド / 馬連 */
 function SimpleBetRow({
   label,
   horses,
   color,
   allocation,
+  multiplier = 1,
 }: {
   label: string;
   horses: Horse[];
   color: string;
-  allocation?: string;
+  allocation?: number;
+  multiplier?: number;
 }) {
   return (
     <div className="flex items-center gap-2 py-1.5">
@@ -85,24 +102,26 @@ function SimpleBetRow({
           </div>
         ))}
       </div>
-      {allocation && (
+      {allocation !== undefined && (
         <span className="ml-auto text-[9px] font-black text-[var(--kaiko-text-muted)] bg-black/5 px-1.5 py-0.5 rounded-full shrink-0">
-          {allocation}
+          {(allocation * multiplier).toLocaleString()}円
         </span>
       )}
     </div>
   );
 }
 
-/** エクスタシー用 単勝行（金額付き） */
+/** エクスタシー用 単勝行（multiplier対応） */
 function GamblerTanshoRow({
   horse,
-  amount,
+  baseAmount,
   color,
+  multiplier = 1,
 }: {
   horse: Horse;
-  amount: number;
+  baseAmount: number;
   color: string;
+  multiplier?: number;
 }) {
   return (
     <div className="flex items-center gap-2 py-1.5">
@@ -122,31 +141,36 @@ function GamblerTanshoRow({
           </span>
         )}
       </div>
-      <span className="text-[10px] font-black text-[#131313] shrink-0">{amount.toLocaleString()}円</span>
+      <span className="text-[10px] font-black text-[#131313] shrink-0">
+        {(baseAmount * multiplier).toLocaleString()}円
+      </span>
     </div>
   );
 }
 
-/** エクスタシー用 3連複1軸流し行（金額付き） */
+/** エクスタシー用 3連複1軸流し行（multiplier対応） */
 function GamblerSanrenpukuRow({
   axis,
   partners,
   points,
-  perPoint,
+  basePerPoint,
   color,
+  multiplier = 1,
 }: {
   axis: Horse;
   partners: Horse[];
   points: number;
-  perPoint: number;
+  basePerPoint: number;
   color: string;
+  multiplier?: number;
 }) {
+  const perPoint = basePerPoint * multiplier;
   return (
     <div className="py-1.5">
       <div className="flex items-center gap-2 mb-1.5">
         <BetLabel label="3連複F" color={color} />
         <span className="text-[10px] text-[var(--kaiko-text-muted)]">
-          {points}点 × {perPoint}円
+          {points}点 × {perPoint.toLocaleString()}円
         </span>
         <span className="ml-auto text-[10px] font-black text-[#131313]">
           {(points * perPoint).toLocaleString()}円
@@ -177,22 +201,25 @@ function GamblerSanrenpukuRow({
   );
 }
 
-/** エクスタシー用 3連単フォーメーション行（金額付き） */
+/** エクスタシー用 3連単フォーメーション行（multiplier対応） */
 function GamblerSanrentanRow({
   points,
-  perPoint,
+  basePerPoint,
   slot1,
   slot2,
   slot3,
   color,
+  multiplier = 1,
 }: {
   points: number;
-  perPoint: number;
+  basePerPoint: number;
   slot1: Horse[];
   slot2: Horse[];
   slot3: Horse[];
   color: string;
+  multiplier?: number;
 }) {
+  const perPoint = basePerPoint * multiplier;
   const slots = [
     { label: "1着", horses: slot1 },
     { label: "2着", horses: slot2 },
@@ -231,7 +258,7 @@ function GamblerSanrentanRow({
 }
 
 /** エクスタシータブ本体 */
-function GamblerSection({ top5 }: { top5: Horse[] }) {
+function GamblerSection({ top5, multiplier = 1 }: { top5: Horse[]; multiplier?: number }) {
   if (top5.length < 4) {
     return (
       <p className="text-[11px] text-[var(--kaiko-text-muted)] py-2">
@@ -247,6 +274,7 @@ function GamblerSection({ top5 }: { top5: Horse[] }) {
 
   // 穴馬判定: ◎が5人気以下 or 人気不明
   const isAnaUma = rank1.popularity === null || rank1.popularity >= 5;
+  const total = BASE_AMOUNT["エクスタシー"] * multiplier;
 
   return (
     <div>
@@ -270,32 +298,35 @@ function GamblerSection({ top5 }: { top5: Horse[] }) {
         {isAnaUma ? (
           /* 穴馬: 単勝500 + 3連複3点×100=300 + 3連単4点×300=1,200 = 2,000円 */
           <>
-            <GamblerTanshoRow horse={rank1} amount={500} color="var(--kaiko-primary)" />
+            <GamblerTanshoRow horse={rank1} baseAmount={500} color="var(--kaiko-primary)" multiplier={multiplier} />
             <GamblerSanrenpukuRow
               axis={rank1}
               partners={[rank2, rank3, rank4]}
               points={3}
-              perPoint={100}
+              basePerPoint={100}
               color="var(--kaiko-text-muted)"
+              multiplier={multiplier}
             />
             <GamblerSanrentanRow
               points={4}
-              perPoint={300}
+              basePerPoint={300}
               slot1={[rank1]}
               slot2={[rank2, rank3]}
               slot3={[rank2, rank3, rank4]}
               color="#f97316"
+              multiplier={multiplier}
             />
           </>
         ) : (
           /* 人気馬: 3連単F 4点×500=2,000円 */
           <GamblerSanrentanRow
             points={4}
-            perPoint={500}
+            basePerPoint={500}
             slot1={[rank1]}
             slot2={[rank2, rank3]}
             slot3={[rank2, rank3, rank4]}
             color="#f97316"
+            multiplier={multiplier}
           />
         )}
       </div>
@@ -303,7 +334,7 @@ function GamblerSection({ top5 }: { top5: Horse[] }) {
       {/* 合計 */}
       <div className="flex justify-end items-center pt-2 mt-1 border-t border-black/8">
         <span className="text-[10px] text-[var(--kaiko-text-muted)] mr-1.5">合計</span>
-        <span className="text-[13px] font-black text-[#131313]">2,000円</span>
+        <span className="text-[13px] font-black text-[#131313]">{total.toLocaleString()}円</span>
       </div>
     </div>
   );
@@ -316,16 +347,19 @@ function FormationRow({
   rest,
   isTrifecta,
   color,
-  perPoint,
+  basePerPoint,
+  multiplier = 1,
 }: {
   label: string;
   axis: Horse[];
   rest: Horse[];
   isTrifecta: boolean;
   color: string;
-  perPoint?: number;
+  basePerPoint?: number;
+  multiplier?: number;
 }) {
   const tickets = rest.length;
+  const perPoint = basePerPoint !== undefined ? basePerPoint * multiplier : undefined;
   const slots = [
     { slot: isTrifecta ? "1着" : "1", horses: [axis[0]] },
     { slot: isTrifecta ? "2着" : "2", horses: [axis[1]] },
@@ -336,10 +370,10 @@ function FormationRow({
     <div className="py-1.5">
       <div className="flex items-center gap-2 mb-1.5">
         <BetLabel label={label} color={color} />
-        {perPoint ? (
+        {perPoint !== undefined ? (
           <>
             <span className="text-[10px] text-[var(--kaiko-text-muted)]">
-              {tickets}点 × {perPoint}円
+              {tickets}点 × {perPoint.toLocaleString()}円
             </span>
             <span className="ml-auto text-[10px] font-black text-[#131313]">
               {(tickets * perPoint).toLocaleString()}円
@@ -377,10 +411,12 @@ function FormationRow({
 export default function PurchaseSupportSection({
   adjustedScores,
   entriesWithForm,
+  raceId,
   defaultOpen = false,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const [activeTab, setActiveTab] = useState<PersonalityTab>("コツコツ");
+  const [multiplier, setMultiplier] = useState(1);
 
   if (adjustedScores.length < 2) return null;
 
@@ -399,6 +435,13 @@ export default function PurchaseSupportSection({
   const rank1 = top5[0];
   const rank2 = top5[1];
   const rest  = top5.slice(2);
+
+  const handleTabChange = (tab: PersonalityTab) => {
+    setActiveTab(tab);
+    setMultiplier(1);
+  };
+
+  const currentTotal = BASE_AMOUNT[activeTab] * multiplier;
 
   return (
     <section className="bg-white rounded-xl overflow-hidden border border-black/8">
@@ -438,7 +481,7 @@ export default function PurchaseSupportSection({
             {(["コツコツ", "ワーキング", "エクスタシー"] as PersonalityTab[]).map((tab) => (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => handleTabChange(tab)}
                 className={`px-3 py-1 rounded-lg text-[10px] font-black transition-colors ${
                   activeTab === tab
                     ? "bg-[var(--kaiko-primary)] text-[#131313]"
@@ -448,6 +491,27 @@ export default function PurchaseSupportSection({
                 {tab}
               </button>
             ))}
+          </div>
+
+          {/* 金額セレクター */}
+          <div className="flex gap-1.5 px-4 pt-2 pb-1">
+            {PRESETS[activeTab].map((preset) => {
+              const m = preset / BASE_AMOUNT[activeTab];
+              const isSelected = multiplier === m;
+              return (
+                <button
+                  key={preset}
+                  onClick={() => setMultiplier(m)}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-colors ${
+                    isSelected
+                      ? "bg-[var(--kaiko-primary)] text-[#131313]"
+                      : "bg-black/6 text-[var(--kaiko-text-muted)]"
+                  }`}
+                >
+                  {preset >= 10000 ? `${preset / 10000}万` : `${(preset / 1000).toFixed(preset % 1000 === 0 ? 0 : 1)}K`}
+                </button>
+              );
+            })}
           </div>
 
           <div className="px-4 pb-3 space-y-1">
@@ -460,36 +524,36 @@ export default function PurchaseSupportSection({
 
             <div className="divide-y divide-black/6">
               {activeTab === "コツコツ" ? (
-                /* コツコツ: 単勝+複勝 or ワイド+馬連（1,000円ベース） */
+                /* コツコツ: 単勝+複勝 or ワイド+馬連 */
                 <>
                   <div className="divide-y divide-black/6">
                     {isLargeGap ? (
                       <>
-                        <SimpleBetRow label="単勝" horses={[rank1]} color="var(--kaiko-primary)" allocation="200円" />
-                        <SimpleBetRow label="複勝" horses={[rank1]} color="var(--kaiko-tag-green-text)" allocation="800円" />
+                        <SimpleBetRow label="単勝" horses={[rank1]} color="var(--kaiko-primary)"        allocation={200} multiplier={multiplier} />
+                        <SimpleBetRow label="複勝" horses={[rank1]} color="var(--kaiko-tag-green-text)" allocation={800} multiplier={multiplier} />
                       </>
                     ) : (
                       <>
-                        <SimpleBetRow label="ワイド" horses={[rank1, rank2]} color="var(--kaiko-tag-green-text)" allocation="700円" />
-                        <SimpleBetRow label="馬連"   horses={[rank1, rank2]} color="#60a5fa"                      allocation="300円" />
+                        <SimpleBetRow label="ワイド" horses={[rank1, rank2]} color="var(--kaiko-tag-green-text)" allocation={700} multiplier={multiplier} />
+                        <SimpleBetRow label="馬連"   horses={[rank1, rank2]} color="#60a5fa"                      allocation={300} multiplier={multiplier} />
                       </>
                     )}
                   </div>
                   <div className="flex justify-end items-center pt-2 mt-1 border-t border-black/8">
                     <span className="text-[10px] text-[var(--kaiko-text-muted)] mr-1.5">合計</span>
-                    <span className="text-[13px] font-black text-[#131313]">1,000円</span>
+                    <span className="text-[13px] font-black text-[#131313]">{currentTotal.toLocaleString()}円</span>
                   </div>
                 </>
               ) : activeTab === "エクスタシー" ? (
-                <GamblerSection top5={top5} />
+                <GamblerSection top5={top5} multiplier={multiplier} />
               ) : (
-                /* ワーキング: 単勝100 or 馬連400 + 3連複F(各100or200) + 3連単F(各200) 計1,000円 */
+                /* ワーキング: 単勝100 or 馬連400 + 3連複F + 3連単F */
                 <>
                   <div className="divide-y divide-black/6">
                     {isLargeGap ? (
-                      <SimpleBetRow label="単勝" horses={[rank1]} color="var(--kaiko-primary)" allocation="100円" />
+                      <SimpleBetRow label="単勝" horses={[rank1]} color="var(--kaiko-primary)" allocation={100} multiplier={multiplier} />
                     ) : (
-                      <SimpleBetRow label="馬連" horses={[rank1, rank2]} color="#60a5fa" allocation="400円" />
+                      <SimpleBetRow label="馬連" horses={[rank1, rank2]} color="#60a5fa" allocation={400} multiplier={multiplier} />
                     )}
                     {rest.length > 0 && (
                       <FormationRow
@@ -498,7 +562,8 @@ export default function PurchaseSupportSection({
                         rest={rest}
                         isTrifecta={false}
                         color="var(--kaiko-text-muted)"
-                        perPoint={isLargeGap ? 100 : 200}
+                        basePerPoint={isLargeGap ? 100 : 200}
+                        multiplier={multiplier}
                       />
                     )}
                     {isLargeGap && rest.length > 0 && (
@@ -508,17 +573,32 @@ export default function PurchaseSupportSection({
                         rest={rest}
                         isTrifecta={true}
                         color="var(--kaiko-primary)"
-                        perPoint={200}
+                        basePerPoint={200}
+                        multiplier={multiplier}
                       />
                     )}
                   </div>
                   <div className="flex justify-end items-center pt-2 mt-1 border-t border-black/8">
                     <span className="text-[10px] text-[var(--kaiko-text-muted)] mr-1.5">合計</span>
-                    <span className="text-[13px] font-black text-[#131313]">1,000円</span>
+                    <span className="text-[13px] font-black text-[#131313]">{currentTotal.toLocaleString()}円</span>
                   </div>
                 </>
               )}
             </div>
+          </div>
+
+          {/* netkeibaで投票ボタン */}
+          <div className="px-4 pb-4">
+            <a
+              href={`https://race.netkeiba.com/race/shutuba.html?race_id=${raceId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full bg-[#131313] text-white rounded-xl py-3 font-black text-sm flex items-center justify-center gap-2 active:opacity-70 transition-opacity"
+            >
+              <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+              netkeibaで投票する
+              <span className="ml-auto text-[10px] font-bold opacity-60 pr-1">{currentTotal.toLocaleString()}円</span>
+            </a>
           </div>
         </div>
       )}

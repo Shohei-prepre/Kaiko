@@ -88,6 +88,7 @@ interface Props {
   trackBiasLevel:      string | null;
   trackBiasSummary:    string | null;
   entryCount:          number;
+  raceId:              string;
 }
 
 // ── メインコンポーネント ───────────────────────────────────────────────────────
@@ -103,6 +104,7 @@ export default function UpcomingRaceClient({
   trackBiasLevel,
   trackBiasSummary,
   entryCount,
+  raceId,
 }: Props) {
   // 展開選択（推奨パターンをデフォルト）
   const [selectedPace, setSelectedPace] = useState<PaceTab>(paceResult.pattern);
@@ -193,6 +195,7 @@ export default function UpcomingRaceClient({
       <PurchaseSupportSection
         adjustedScores={adjustedScoreArr}
         entriesWithForm={entriesWithForm}
+        raceId={raceId}
       />
 
       {/* 出走馬リスト ラベル */}
