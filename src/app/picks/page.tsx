@@ -348,6 +348,10 @@ async function fetchPicksData(): Promise<RaceWithPicks[]> {
         raceNumber: race.race_number,
         pacePattern,
         entries: pickedEntries,
+        adjustedScores: scores,
+        allEntries: withForm
+          .filter((e) => e.horse_id != null)
+          .map((e) => ({ horseId: e.horse_id!, horseName: e.horse_name, horseNumber: e.horse_number })),
       });
     }
 

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
+import PurchaseSupportSection from "@/app/races/upcoming/[id]/PurchaseSupportSection";
+import type { UpcomingEntryWithForm } from "@/lib/database.types";
 
 // ─── 型 ──────────────────────────────────────────────────────────
 
@@ -33,6 +35,8 @@ export interface RaceWithPicks {
   raceNumber: number | null;
   pacePattern: "前残り" | "差し有利" | "フラット";
   entries: PickEntry[];
+  adjustedScores: [number, number][];
+  allEntries: { horseId: number; horseName: string; horseNumber: number | null }[];
 }
 
 // ─── スタイル定数 ─────────────────────────────────────────────────
@@ -130,12 +134,9 @@ export default function PicksClient({ races }: { races: RaceWithPicks[] }) {
           <span className="text-xl font-[family-name:var(--font-noto-sans-jp)] font-black text-[var(--kaiko-primary)] italic">AI</span>
         </Link>
         <div className="ml-3 flex items-center gap-1.5">
-          <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-[18px]">tips_and_updates</span>
-          <span className="text-[13px] font-black text-white tracking-tight">注目馬</span>
+          <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>local_activity</span>
+          <span className="text-[13px] font-black text-white tracking-tight">コツコツ予想</span>
         </div>
-        <span className="ml-auto text-[11px] font-bold text-[var(--kaiko-text-muted)] uppercase tracking-wider">
-          {totalHorses} horses
-        </span>
       </header>
 
       <main className="pt-16 pb-28 max-w-md mx-auto">
@@ -170,16 +171,6 @@ export default function PicksClient({ races }: { races: RaceWithPicks[] }) {
           </div>
         ) : (
           <div className="px-3 space-y-4">
-            {/* 凡例 */}
-            <div className="flex flex-wrap gap-2 px-1 pb-1">
-              <span className="flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border bg-[var(--kaiko-primary)]/10 border-[var(--kaiko-primary)]/30 text-[var(--kaiko-primary)]">
-                ◎ 適正1位
-              </span>
-              <span className="flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border bg-blue-50 border-blue-200 text-blue-500">
-                ○ 適正2位
-              </span>
-            </div>
-
             {/* 競馬場ごとにグループ表示 */}
             {venueList.map(([track, trackRaces]) => (
               <div key={track}>
@@ -188,72 +179,51 @@ export default function PicksClient({ races }: { races: RaceWithPicks[] }) {
                   <span className="text-[12px] font-black text-[#131313] uppercase tracking-wider">{track}</span>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {trackRaces.map((race) => {
-                    const isExpanded = expandedRaces.has(race.raceId);
                     const gradeStyle = GRADE_STYLE[race.grade] ?? "text-[var(--kaiko-text-muted)] border-black/10 bg-black/4";
+                    const adapted = race.allEntries.map((e) => ({
+                      id: 0,
+                      race_id: race.raceId,
+                      horse_id: e.horseId,
+                      horse_name: e.horseName,
+                      frame_number: null,
+                      horse_number: e.horseNumber,
+                      jockey: null,
+                      weight_carried: null,
+                      odds: null,
+                      popularity: null,
+                      recentPerfs: [],
+                    } as UpcomingEntryWithForm));
 
                     return (
-                      <div key={race.raceId} className="bg-white rounded-xl border border-black/8 overflow-hidden">
+                      <div key={race.raceId} className="space-y-1.5">
                         {/* レースヘッダー */}
-                        <button
-                          onClick={() => toggleRace(race.raceId)}
-                          className="w-full px-4 py-3 flex items-center gap-2 text-left hover:bg-black/4 active:bg-black/5 transition-colors"
+                        <Link
+                          href={`/races/upcoming/${race.raceId}`}
+                          className="flex items-center gap-2 px-1"
                         >
                           <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border ${gradeStyle} uppercase shrink-0`}>
                             {race.grade || "—"}
                           </span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-baseline gap-1.5">
-                              {race.raceNumber !== null && (
-                                <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] shrink-0">
-                                  R{race.raceNumber}
-                                </span>
-                              )}
-                              <div className="text-[13px] font-black text-[#131313] truncate">
-                                {race.raceName}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[10px] text-[var(--kaiko-text-muted)]">
-                                {formatDate(race.raceDate)} · {race.surface}{race.distance}m
-                              </span>
-                              {/* 推奨展開バッジ */}
-                              <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-[var(--kaiko-primary)]/10 text-[var(--kaiko-primary)]">
-                                {PACE_LABEL[race.pacePattern]}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-[11px] font-bold text-[var(--kaiko-text-muted)]">
-                              {race.entries.length}頭
+                          {race.raceNumber !== null && (
+                            <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)] shrink-0">
+                              R{race.raceNumber}
                             </span>
-                            <span className="material-symbols-outlined text-[var(--kaiko-text-muted)] text-[18px]">
-                              {isExpanded ? "expand_less" : "expand_more"}
-                            </span>
-                          </div>
-                        </button>
+                          )}
+                          <span className="text-[13px] font-black text-[#131313] truncate flex-1">{race.raceName}</span>
+                          <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-[var(--kaiko-primary)]/10 text-[var(--kaiko-primary)] shrink-0">
+                            {PACE_LABEL[race.pacePattern]}
+                          </span>
+                          <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-[16px] shrink-0">chevron_right</span>
+                        </Link>
 
-                        <div className="px-4 pb-1 -mt-1">
-                          <Link
-                            href={`/races/upcoming/${race.raceId}`}
-                            className="text-[10px] text-[var(--kaiko-primary)] font-bold flex items-center gap-0.5"
-                          >
-                            レースの詳細を見る
-                          </Link>
-                        </div>
-
-                        {isExpanded && (
-                          <div className="border-t border-black/8">
-                            {race.entries.map((entry, i) => (
-                              <PickHorseRow
-                                key={entry.entryId}
-                                entry={entry}
-                                isLast={i === race.entries.length - 1}
-                              />
-                            ))}
-                          </div>
-                        )}
+                        {/* コツコツ予想 */}
+                        <PurchaseSupportSection
+                          adjustedScores={race.adjustedScores}
+                          entriesWithForm={adapted}
+                          defaultOpen={true}
+                        />
                       </div>
                     );
                   })}

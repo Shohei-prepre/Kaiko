@@ -10,6 +10,7 @@ interface Props {
   /** [horse_id, adjusted_score] — score降順で並んでいること */
   adjustedScores: [number, number][];
   entriesWithForm: UpcomingEntryWithForm[];
+  defaultOpen?: boolean;
 }
 
 interface Horse {
@@ -112,8 +113,8 @@ function FormationRow({
 
 // ── メインコンポーネント ───────────────────────────────────────────────────
 
-export default function PurchaseSupportSection({ adjustedScores, entriesWithForm }: Props) {
-  const [open, setOpen] = useState(false);
+export default function PurchaseSupportSection({ adjustedScores, entriesWithForm, defaultOpen = false }: Props) {
+  const [open, setOpen] = useState(defaultOpen);
 
   if (adjustedScores.length < 2) return null;
 
