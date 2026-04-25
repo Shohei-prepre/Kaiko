@@ -48,9 +48,9 @@ function SimpleBetRow({ label, horses, color }: { label: string; horses: Horse[]
         {horses.map((h, i) => (
           <div key={h.hid} className="flex items-center gap-1">
             {i > 0 && <span className="text-[10px] text-[var(--kaiko-text-muted)] font-bold">–</span>}
-            <span className="text-[11px] font-black text-[#131313]">{i === 0 ? "◎" : "○"}</span>
+            <span className="text-[11px] font-black text-[#131313] mr-0.5">{i === 0 ? "◎" : "○"}</span>
             <HorseNum num={h.num} />
-            <span className="text-[11px] font-bold text-[#131313] max-w-[80px] truncate">{h.name}</span>
+            <span className="text-[11px] font-bold text-[#131313] ml-1 max-w-[90px] truncate">{h.name}</span>
           </div>
         ))}
       </div>
@@ -73,16 +73,11 @@ function FormationRow({
   color: string;
 }) {
   const tickets = isTrifecta ? 2 * rest.length : rest.length;
-  const axisNums = axis.map((h) => h.num ?? "?").join(",");
-  const restNums = rest.map((h) => h.num ?? "?").join(",");
 
   return (
     <div className="py-1.5">
       <div className="flex items-center gap-2 mb-1.5">
         <BetLabel label={label} color={color} />
-        <span className="text-[10px] font-bold text-[var(--kaiko-text-muted)]">
-          {axisNums} ✕ {axisNums} ✕ {restNums}
-        </span>
         <span className="ml-auto text-[10px] font-black text-[#131313]">{tickets}点</span>
       </div>
 
