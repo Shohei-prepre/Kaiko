@@ -135,7 +135,7 @@ export default function PicksClient({ races }: { races: RaceWithPicks[] }) {
         </Link>
         <div className="ml-3 flex items-center gap-1.5">
           <span className="material-symbols-outlined text-[var(--kaiko-primary)] text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>local_activity</span>
-          <span className="text-[13px] font-black text-white tracking-tight">コツコツ予想</span>
+          <span className="text-[13px] font-black text-white tracking-tight">買い目サポート</span>
         </div>
       </header>
 

@@ -25,6 +25,11 @@ function formatPreset(p: number): string {
   return `${p}`;
 }
 
+/** 馬券は100円単位のため最も近い100円に丸める（最低100円） */
+function to100(n: number): number {
+  return Math.max(100, Math.round(n / 100) * 100);
+}
+
 interface Props {
   /** [horse_id, adjusted_score] — score降順で並んでいること */
   adjustedScores: [number, number][];
@@ -106,7 +111,7 @@ function SimpleBetRow({
       </div>
       {allocation !== undefined && (
         <span className="ml-auto text-[9px] font-black text-[var(--kaiko-text-muted)] bg-black/5 px-1.5 py-0.5 rounded-full shrink-0">
-          {(allocation * multiplier).toLocaleString()}円
+          {to100(allocation * multiplier).toLocaleString()}円
         </span>
       )}
     </div>
@@ -144,7 +149,7 @@ function GamblerTanshoRow({
         )}
       </div>
       <span className="text-[10px] font-black text-[#131313] shrink-0">
-        {(baseAmount * multiplier).toLocaleString()}円
+        {to100(baseAmount * multiplier).toLocaleString()}円
       </span>
     </div>
   );
@@ -166,7 +171,7 @@ function GamblerSanrenpukuRow({
   color: string;
   multiplier?: number;
 }) {
-  const perPoint = basePerPoint * multiplier;
+  const perPoint = to100(basePerPoint * multiplier);
   return (
     <div className="py-1.5">
       <div className="flex items-center gap-2 mb-1.5">
@@ -221,7 +226,7 @@ function GamblerSanrentanRow({
   color: string;
   multiplier?: number;
 }) {
-  const perPoint = basePerPoint * multiplier;
+  const perPoint = to100(basePerPoint * multiplier);
   const slots = [
     { label: "1着", horses: slot1 },
     { label: "2着", horses: slot2 },
@@ -361,7 +366,7 @@ function FormationRow({
   multiplier?: number;
 }) {
   const tickets = rest.length;
-  const perPoint = basePerPoint !== undefined ? basePerPoint * multiplier : undefined;
+  const perPoint = basePerPoint !== undefined ? to100(basePerPoint * multiplier) : undefined;
   const slots = [
     { slot: isTrifecta ? "1着" : "1", horses: [axis[0]] },
     { slot: isTrifecta ? "2着" : "2", horses: [axis[1]] },
