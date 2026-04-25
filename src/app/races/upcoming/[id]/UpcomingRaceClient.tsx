@@ -195,7 +195,6 @@ export default function UpcomingRaceClient({
       <PurchaseSupportSection
         adjustedScores={adjustedScoreArr}
         entriesWithForm={entriesWithForm}
-        raceId={raceId}
       />
 
       {/* 出走馬リスト ラベル */}

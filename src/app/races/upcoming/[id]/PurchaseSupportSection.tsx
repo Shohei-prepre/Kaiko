@@ -29,7 +29,6 @@ interface Props {
   /** [horse_id, adjusted_score] — score降順で並んでいること */
   adjustedScores: [number, number][];
   entriesWithForm: UpcomingEntryWithForm[];
-  raceId: string;
   defaultOpen?: boolean;
 }
 
@@ -414,7 +413,6 @@ function FormationRow({
 export default function PurchaseSupportSection({
   adjustedScores,
   entriesWithForm,
-  raceId,
   defaultOpen = false,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
@@ -587,19 +585,6 @@ export default function PurchaseSupportSection({
             </div>
           </div>
 
-          {/* netkeibaで投票ボタン */}
-          <div className="px-4 pb-4">
-            <a
-              href={`https://race.netkeiba.com/race/shutuba.html?race_id=${raceId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full bg-[#131313] text-white rounded-xl py-3 font-black text-sm flex items-center justify-center gap-2 active:opacity-70 transition-opacity"
-            >
-              <span className="material-symbols-outlined text-[16px]">open_in_new</span>
-              netkeibaで投票する
-              <span className="ml-auto text-[10px] font-bold opacity-60 pr-1">{currentTotal.toLocaleString()}円</span>
-            </a>
-          </div>
         </div>
       )}
     </section>
