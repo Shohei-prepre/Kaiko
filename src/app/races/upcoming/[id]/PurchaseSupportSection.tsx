@@ -3,8 +3,10 @@
 import { useState } from "react";
 import type { UpcomingEntryWithForm } from "@/lib/database.types";
 
-/** この点差以上なら「◎一強」と判定して単勝・3連単を推奨 */
+/** この点差以上なら「◎一強」と判定 */
 const LARGE_GAP_THRESHOLD = 0.5;
+
+type PersonalityTab = "コツコツ" | "ワーキング";
 
 interface Props {
   /** [horse_id, adjusted_score] — score降順で並んでいること */
@@ -40,21 +42,42 @@ function BetLabel({ label, color }: { label: string; color: string }) {
   );
 }
 
-/** 単勝 / 馬連 / ワイド などシンプルな買い目行 */
-function SimpleBetRow({ label, horses, color }: { label: string; horses: Horse[]; color: string }) {
+/** 単勝 / 複勝 / ワイド / 馬連 — 配分% バッジ付き */
+function SimpleBetRow({
+  label,
+  horses,
+  color,
+  allocation,
+}: {
+  label: string;
+  horses: Horse[];
+  color: string;
+  allocation?: string;
+}) {
   return (
     <div className="flex items-center gap-2 py-1.5">
       <BetLabel label={label} color={color} />
-      <div className="flex items-center gap-1.5 flex-wrap">
+      <div className="flex items-center gap-1.5 flex-wrap flex-1">
         {horses.map((h, i) => (
           <div key={h.hid} className="flex items-center gap-1">
-            {i > 0 && <span className="text-[10px] text-[var(--kaiko-text-muted)] font-bold">–</span>}
-            <span className="text-[11px] font-black text-[#131313] mr-0.5">{i === 0 ? "◎" : "○"}</span>
+            {i > 0 && (
+              <span className="text-[10px] text-[var(--kaiko-text-muted)] font-bold">–</span>
+            )}
+            <span className="text-[11px] font-black text-[#131313] mr-0.5">
+              {i === 0 ? "◎" : "○"}
+            </span>
             <HorseNum num={h.num} />
-            <span className="text-[11px] font-bold text-[#131313] ml-1 break-all">{h.name}</span>
+            <span className="text-[11px] font-bold text-[#131313] ml-1 break-all">
+              {h.name}
+            </span>
           </div>
         ))}
       </div>
+      {allocation && (
+        <span className="ml-auto text-[9px] font-black text-[var(--kaiko-text-muted)] bg-black/5 px-1.5 py-0.5 rounded-full shrink-0">
+          {allocation}
+        </span>
+      )}
     </div>
   );
 }
@@ -73,8 +96,6 @@ function FormationRow({
   isTrifecta: boolean;
   color: string;
 }) {
-  // 3連単: 1着=◎のみ, 2着=○のみ, 3着=rest → rest.length点
-  // 3連複: 1,2=axis両方,        3着=rest → rest.length点
   const tickets = rest.length;
   const slots = [
     { slot: isTrifecta ? "1着" : "1", horses: [axis[0]] },
@@ -113,8 +134,13 @@ function FormationRow({
 
 // ── メインコンポーネント ───────────────────────────────────────────────────
 
-export default function PurchaseSupportSection({ adjustedScores, entriesWithForm, defaultOpen = false }: Props) {
+export default function PurchaseSupportSection({
+  adjustedScores,
+  entriesWithForm,
+  defaultOpen = false,
+}: Props) {
   const [open, setOpen] = useState(defaultOpen);
+  const [activeTab, setActiveTab] = useState<PersonalityTab>("コツコツ");
 
   if (adjustedScores.length < 2) return null;
 
@@ -148,7 +174,7 @@ export default function PurchaseSupportSection({ adjustedScores, entriesWithForm
           local_activity
         </span>
         <span className="text-[10px] font-black text-[#131313] uppercase tracking-wider">
-          コツコツ予想
+          {activeTab}予想
         </span>
         <span
           className={`ml-auto text-[9px] font-black px-1.5 py-0.5 rounded-full ${
@@ -166,60 +192,103 @@ export default function PurchaseSupportSection({ adjustedScores, entriesWithForm
 
       {/* コンテンツ */}
       {open && (
-        <div className="px-4 py-3 space-y-1 border-t border-black/8">
-          {/* 根拠テキスト */}
-          <p className="text-[11px] text-[var(--kaiko-text-muted)] leading-snug pb-1">
-            適性差:{" "}
-            <span className="font-bold text-[#131313]">{gap.toFixed(2)}pt</span>
-            {isLargeGap
-              ? " — ◎が明確に優位。単勝・3連単も推奨。"
-              : " — 接戦。ワイド・馬連で広めに。"}
-          </p>
+        <div className="border-t border-black/8">
+          {/* タブ切り替え */}
+          <div className="flex gap-1.5 px-4 pt-3 pb-1">
+            {(["コツコツ", "ワーキング"] as PersonalityTab[]).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-3 py-1 rounded-lg text-[10px] font-black transition-colors ${
+                  activeTab === tab
+                    ? "bg-[var(--kaiko-primary)] text-[#131313]"
+                    : "bg-black/6 text-[var(--kaiko-text-muted)]"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
 
-          <div className="divide-y divide-black/6">
-            {/* 単勝 or ワイド+馬連 */}
-            {isLargeGap ? (
-              <SimpleBetRow
-                label="単勝"
-                horses={[rank1]}
-                color="var(--kaiko-primary)"
-              />
-            ) : (
-              <>
-                <SimpleBetRow
-                  label="ワイド"
-                  horses={[rank1, rank2]}
-                  color="var(--kaiko-tag-green-text)"
-                />
-                <SimpleBetRow
-                  label="馬連"
-                  horses={[rank1, rank2]}
-                  color="#60a5fa"
-                />
-              </>
-            )}
+          <div className="px-4 pb-3 space-y-1">
+            {/* 根拠テキスト */}
+            <p className="text-[11px] text-[var(--kaiko-text-muted)] leading-snug pb-1">
+              適性差:{" "}
+              <span className="font-bold text-[#131313]">{gap.toFixed(2)}pt</span>
+              {isLargeGap ? " — ◎が明確に優位。" : " — 接戦。"}
+            </p>
 
-            {/* 3連複フォーメーション（常時） */}
-            {rest.length > 0 && (
-              <FormationRow
-                label="3連複F"
-                axis={[rank1, rank2]}
-                rest={rest}
-                isTrifecta={false}
-                color="var(--kaiko-text-muted)"
-              />
-            )}
-
-            {/* 3連単フォーメーション（◎一強のみ） */}
-            {isLargeGap && rest.length > 0 && (
-              <FormationRow
-                label="3連単F"
-                axis={[rank1, rank2]}
-                rest={rest}
-                isTrifecta={true}
-                color="var(--kaiko-primary)"
-              />
-            )}
+            <div className="divide-y divide-black/6">
+              {activeTab === "コツコツ" ? (
+                /* コツコツ: 単勝+複勝 or ワイド+馬連（配分%付き・3連なし） */
+                isLargeGap ? (
+                  <>
+                    <SimpleBetRow
+                      label="単勝"
+                      horses={[rank1]}
+                      color="var(--kaiko-primary)"
+                      allocation="20%"
+                    />
+                    <SimpleBetRow
+                      label="複勝"
+                      horses={[rank1]}
+                      color="var(--kaiko-tag-green-text)"
+                      allocation="80%"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <SimpleBetRow
+                      label="ワイド"
+                      horses={[rank1, rank2]}
+                      color="var(--kaiko-tag-green-text)"
+                      allocation="70%"
+                    />
+                    <SimpleBetRow
+                      label="馬連"
+                      horses={[rank1, rank2]}
+                      color="#60a5fa"
+                      allocation="30%"
+                    />
+                  </>
+                )
+              ) : (
+                /* ワーキング: 単勝 or 馬連 + 3連複F（+ 3連単F は一強のみ） */
+                <>
+                  {isLargeGap ? (
+                    <SimpleBetRow
+                      label="単勝"
+                      horses={[rank1]}
+                      color="var(--kaiko-primary)"
+                    />
+                  ) : (
+                    <SimpleBetRow
+                      label="馬連"
+                      horses={[rank1, rank2]}
+                      color="#60a5fa"
+                    />
+                  )}
+                  {rest.length > 0 && (
+                    <FormationRow
+                      label="3連複F"
+                      axis={[rank1, rank2]}
+                      rest={rest}
+                      isTrifecta={false}
+                      color="var(--kaiko-text-muted)"
+                    />
+                  )}
+                  {isLargeGap && rest.length > 0 && (
+                    <FormationRow
+                      label="3連単F"
+                      axis={[rank1, rank2]}
+                      rest={rest}
+                      isTrifecta={true}
+                      color="var(--kaiko-primary)"
+                    />
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
