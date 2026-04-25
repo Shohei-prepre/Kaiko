@@ -36,7 +36,7 @@ export interface RaceWithPicks {
   pacePattern: "前残り" | "差し有利" | "フラット";
   entries: PickEntry[];
   adjustedScores: [number, number][];
-  allEntries: { horseId: number; horseName: string; horseNumber: number | null }[];
+  allEntries: { horseId: number; horseName: string; horseNumber: number | null; popularity: number | null; odds: number | null }[];
 }
 
 // ─── スタイル定数 ─────────────────────────────────────────────────
@@ -191,8 +191,8 @@ export default function PicksClient({ races }: { races: RaceWithPicks[] }) {
                       horse_number: e.horseNumber,
                       jockey: null,
                       weight_carried: null,
-                      odds: null,
-                      popularity: null,
+                      odds: e.odds,
+                      popularity: e.popularity,
                       recentPerfs: [],
                     } as UpcomingEntryWithForm));
 

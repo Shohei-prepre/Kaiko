@@ -19,6 +19,7 @@ interface Horse {
   hid: number;
   num: number | null;
   name: string;
+  popularity: number | null;
 }
 
 // ── サブコンポーネント ─────────────────────────────────────────────────────
@@ -70,6 +71,17 @@ function SimpleBetRow({
             <span className="text-[11px] font-bold text-[#131313] ml-1 break-all">
               {h.name}
             </span>
+            {h.popularity !== null && (
+              <span className={`text-[9px] font-black px-1 py-0.5 rounded-full shrink-0 ${
+                h.popularity <= 3
+                  ? "bg-[var(--kaiko-primary)]/10 text-[var(--kaiko-primary)]"
+                  : h.popularity <= 6
+                  ? "bg-black/6 text-[#131313]"
+                  : "bg-black/4 text-[var(--kaiko-text-muted)]"
+              }`}>
+                {h.popularity}人気
+              </span>
+            )}
           </div>
         ))}
       </div>
@@ -153,7 +165,7 @@ export default function PurchaseSupportSection({
 
   const top5: Horse[] = adjustedScores.slice(0, 5).map(([hid]) => {
     const entry = horseMap.get(hid);
-    return { hid, num: entry?.horse_number ?? null, name: entry?.horse_name ?? "?" };
+    return { hid, num: entry?.horse_number ?? null, name: entry?.horse_name ?? "?", popularity: entry?.popularity ?? null };
   });
 
   const rank1 = top5[0];
