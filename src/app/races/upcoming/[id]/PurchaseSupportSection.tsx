@@ -15,12 +15,15 @@ const BASE_AMOUNT: Record<PersonalityTab, number> = {
   "エクスタシー": 2000,
 };
 
-/** タブごとの金額プリセット */
-const PRESETS: Record<PersonalityTab, number[]> = {
-  "コツコツ":    [1000, 2000, 5000, 10000],
-  "ワーキング":  [1000, 2000, 5000, 10000],
-  "エクスタシー": [2000, 4000, 10000, 20000],
-};
+/** 全タブ共通の金額プリセット */
+const PRESETS = [200, 500, 1000, 2500, 5000, 10000];
+
+/** プリセット金額の表示ラベル */
+function formatPreset(p: number): string {
+  if (p >= 10000) return `${p / 10000}万`;
+  if (p >= 1000)  return `${p / 1000}K`;
+  return `${p}`;
+}
 
 interface Props {
   /** [horse_id, adjusted_score] — score降順で並んでいること */
@@ -416,7 +419,7 @@ export default function PurchaseSupportSection({
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const [activeTab, setActiveTab] = useState<PersonalityTab>("コツコツ");
-  const [multiplier, setMultiplier] = useState(1);
+  const [selectedAmount, setSelectedAmount] = useState(1000);
 
   if (adjustedScores.length < 2) return null;
 
@@ -438,10 +441,11 @@ export default function PurchaseSupportSection({
 
   const handleTabChange = (tab: PersonalityTab) => {
     setActiveTab(tab);
-    setMultiplier(1);
+    setSelectedAmount(1000);
   };
 
-  const currentTotal = BASE_AMOUNT[activeTab] * multiplier;
+  const multiplier = selectedAmount / BASE_AMOUNT[activeTab];
+  const currentTotal = selectedAmount;
 
   return (
     <section className="bg-white rounded-xl overflow-hidden border border-black/8">
@@ -495,23 +499,19 @@ export default function PurchaseSupportSection({
 
           {/* 金額セレクター */}
           <div className="flex gap-1.5 px-4 pt-2 pb-1">
-            {PRESETS[activeTab].map((preset) => {
-              const m = preset / BASE_AMOUNT[activeTab];
-              const isSelected = multiplier === m;
-              return (
-                <button
-                  key={preset}
-                  onClick={() => setMultiplier(m)}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-colors ${
-                    isSelected
-                      ? "bg-[var(--kaiko-primary)] text-[#131313]"
-                      : "bg-black/6 text-[var(--kaiko-text-muted)]"
-                  }`}
-                >
-                  {preset >= 10000 ? `${preset / 10000}万` : `${(preset / 1000).toFixed(preset % 1000 === 0 ? 0 : 1)}K`}
-                </button>
-              );
-            })}
+            {PRESETS.map((preset) => (
+              <button
+                key={preset}
+                onClick={() => setSelectedAmount(preset)}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-colors ${
+                  selectedAmount === preset
+                    ? "bg-[var(--kaiko-primary)] text-[#131313]"
+                    : "bg-black/6 text-[var(--kaiko-text-muted)]"
+                }`}
+              >
+                {formatPreset(preset)}
+              </button>
+            ))}
           </div>
 
           <div className="px-4 pb-3 space-y-1">
