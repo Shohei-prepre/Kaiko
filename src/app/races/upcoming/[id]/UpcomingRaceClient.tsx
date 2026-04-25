@@ -5,6 +5,7 @@ import type { UpcomingEntryWithForm } from "@/lib/database.types";
 import type { CourseCharacteristic } from "@/lib/courseCharacteristics";
 import RaceAnalysisSection from "./RaceAnalysisSection";
 import EntryList from "./EntryList";
+import PurchaseSupportSection from "./PurchaseSupportSection";
 
 export type PaceTab = "前残り" | "差し有利" | "フラット";
 export type PickSymbol = "◎" | "○" | "▲" | "△";
@@ -115,7 +116,7 @@ export default function UpcomingRaceClient({
   const postBias = courseChar?.postBias ?? null;
 
   // 適正スコア → 適正ランク（selectedPace が変わるたびに再計算）
-  const adjustedRankMap = useMemo((): Map<number, number> => {
+  const { adjustedRankMap, adjustedScoreArr } = useMemo(() => {
     const scores: [number, number][] = [];
     for (const entry of entriesWithForm) {
       const hid = entry.horse_id;
@@ -129,7 +130,7 @@ export default function UpcomingRaceClient({
     scores.sort((a, b) => b[1] - a[1]);
     const map = new Map<number, number>();
     scores.forEach(([hid], i) => map.set(hid, i + 1));
-    return map;
+    return { adjustedRankMap: map, adjustedScoreArr: scores };
   }, [entriesWithForm, ratingMap, runningStyleMap, selectedPace, trackBiasLevel, postBias]);
 
   // 有効な印（ユーザー変更優先 → なければ適正ランク1位=◎、2位=○）
@@ -186,6 +187,12 @@ export default function UpcomingRaceClient({
         paceSummary={paceResult.summary}
         selectedPace={selectedPace}
         onPaceChange={setSelectedPace}
+      />
+
+      {/* 購入サポート（コツコツ予想） */}
+      <PurchaseSupportSection
+        adjustedScores={adjustedScoreArr}
+        entriesWithForm={entriesWithForm}
       />
 
       {/* 出走馬リスト ラベル */}
