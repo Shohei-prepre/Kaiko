@@ -75,17 +75,11 @@ function FormationRow({
   // 3連単: 1着=◎のみ, 2着=○のみ, 3着=rest → rest.length点
   // 3連複: 1,2=axis両方,        3着=rest → rest.length点
   const tickets = rest.length;
-  const slots = isTrifecta
-    ? [
-        { slot: "1着", horses: [axis[0]] },
-        { slot: "2着", horses: [axis[1]] },
-        { slot: "3着", horses: rest },
-      ]
-    : [
-        { slot: "1", horses: axis },
-        { slot: "2", horses: axis },
-        { slot: "3", horses: rest },
-      ];
+  const slots = [
+    { slot: isTrifecta ? "1着" : "1", horses: [axis[0]] },
+    { slot: isTrifecta ? "2着" : "2", horses: [axis[1]] },
+    { slot: isTrifecta ? "3着" : "3", horses: rest },
+  ];
 
   return (
     <div className="py-1.5">
