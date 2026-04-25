@@ -222,7 +222,7 @@ export default function PicksClient({ races }: { races: RaceWithPicks[] }) {
                         <PurchaseSupportSection
                           adjustedScores={race.adjustedScores}
                           entriesWithForm={adapted}
-                          defaultOpen={true}
+                          defaultOpen={false}
                         />
                       </div>
                     );
