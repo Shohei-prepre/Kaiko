@@ -63,7 +63,7 @@ async function getEntries(raceId: string, headCount: number | null): Promise<Upc
       .from("upcoming_entries" as never)
       .select("*")
       .eq("race_id", raceId);
-    if (headCount) query = (query as any).lte("horse_number", headCount);
+    if (headCount) query = (query as any).or(`horse_number.lte.${headCount},horse_number.is.null`);
     const { data, error } = await (query as any).order("popularity");
     if (error || !data) return [];
     return data as UpcomingEntry[];
